@@ -1,0 +1,42 @@
+{
+  "forms": [
+    {
+      "name": "RecentFilesWidget",
+      "displayName": "$string:recent_files_widget_display_name",
+      "description": "$string:recent_files_widget_desc",
+      "src": "./ets/recentfiles/pages/RecentFilesWidgetCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "colorMode": "auto",
+      "isDynamic": true,
+      "isDefault": true,
+      "updateEnabled": true,
+      "scheduledUpdateTime": "10:30",
+      "updateDuration": 1,
+      "defaultDimension": "2*2",
+      "supportDimensions": ["2*2"]
+    },
+    {
+      "name": "QuickCategoriesWidget",
+      "displayName": "$string:quick_categories_widget_display_name",
+      "description": "$string:quick_categories_widget_desc",
+      "src": "./ets/quickcategories/pages/QuickCategoriesWidgetCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "colorMode": "auto",
+      "isDynamic": true,
+      "isDefault": false,
+      "updateEnabled": true,
+      "scheduledUpdateTime": "10:30",
+      "updateDuration": 1,
+      "defaultDimension": "2*2",
+      "supportDimensions": ["2*2"]
+    }
+  ]
+}

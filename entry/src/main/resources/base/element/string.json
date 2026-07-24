@@ -1,0 +1,40 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "拾序"
+    },
+    {
+      "name": "FileBoxFormAbility_label",
+      "value": "拾序小组件"
+    },
+    {
+      "name": "FileBoxFormAbility_desc",
+      "value": "预览最近文件和快捷分类"
+    },
+    {
+      "name": "recent_files_widget_display_name",
+      "value": "最近文件"
+    },
+    {
+      "name": "recent_files_widget_desc",
+      "value": "在桌面快速查看最近收纳的文件"
+    },
+    {
+      "name": "quick_categories_widget_display_name",
+      "value": "快捷分类"
+    },
+    {
+      "name": "quick_categories_widget_desc",
+      "value": "从桌面快速进入常用分类"
+    }
+  ]
+}
