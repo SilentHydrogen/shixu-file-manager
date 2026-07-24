@@ -1980,7 +1980,7 @@ struct Index {
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: 23, bottom: 9 })
           Row() {
-            Text('版本 0.1.0 · ArkUI-X')
+            Text('版本 1.0.0 · ArkUI-X')
               .fontSize(15)
               .fontColor('#526174')
             Blank()
