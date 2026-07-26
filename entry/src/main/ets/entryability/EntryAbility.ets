@@ -8,7 +8,19 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
     AppStorage.setOrCreate('pendingSharedUris', '');
+    AppStorage.setOrCreate('pendingWidgetAction', '');
     this.receiveSharedFiles(want);
+    this.receiveWidgetAction(want);
+  }
+
+  private receiveWidgetAction(want: Want): void {
+    if (want.parameters === undefined) {
+      return;
+    }
+    const message: Object | undefined = want.parameters['message'];
+    if (typeof message === 'string' && message.length > 0) {
+      AppStorage.setOrCreate('pendingWidgetAction', message);
+    }
   }
 
   private receiveSharedFiles(want: Want): void {
@@ -38,6 +50,7 @@ export default class EntryAbility extends UIAbility {
 
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     this.receiveSharedFiles(want);
+    this.receiveWidgetAction(want);
   }
 
   onDestroy(): void {

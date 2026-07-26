@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\FuShenzhe\\.ohos\\config\\default_MyApplication_BtjyMXAYm1XAifUPvwmZ3PraQ-fsieHDi1IqtlsKaq4=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BF9E177BC72776B30081DB6205E027C844F03194E7A360FFD02E6A8316CD5F90A87E2D54182B830",
+          "profile": "C:\\Users\\FuShenzhe\\.ohos\\config\\default_MyApplication_BtjyMXAYm1XAifUPvwmZ3PraQ-fsieHDi1IqtlsKaq4=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\FuShenzhe\\.ohos\\config\\default_MyApplication_BtjyMXAYm1XAifUPvwmZ3PraQ-fsieHDi1IqtlsKaq4=.p12",
+          "storePassword": "0000001B88DE2E570C0B329815C0C68A8DFB2123A9FCD8A0A84E866BF544D6F52EAA9D1D536FC924FE36B4"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
@@ -19,10 +33,37 @@
     ],
     "buildModeSet": [
       {
-        "name": "debug",
+        "name": "debug"
       },
       {
         "name": "release"
+      }
+    ],
+    "capabilities": [
+      {
+        "bundleName": "com.cdyangzheng.filebox",
+        "config": [
+          {
+            "name": "webAccessServiceForAIQA",
+            "capability": "webAccessServiceForAIQA"
+          },
+          {
+            "name": "Push Kit",
+            "capability": "com.huawei.service.push.base_service"
+          },
+          {
+            "name": "Device status detection",
+            "capability": "com.huawei.service.device_security.device_verify"
+          },
+          {
+            "name": "Map Kit",
+            "capability": "com.huawei.service.mapkit"
+          },
+          {
+            "name": "Safety Detect",
+            "capability": "com.huawei.service.device_security.safety_detect"
+          }
+        ]
       }
     ]
   },

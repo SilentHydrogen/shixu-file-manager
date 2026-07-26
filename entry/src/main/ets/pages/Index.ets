@@ -4,9 +4,12 @@ import preferences from '@ohos.data.preferences';
 import zlib from '@ohos.zlib';
 import curves from '@ohos.curves';
 import { common } from '@kit.AbilityKit';
+import { fileUri } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
 import { textRecognition } from '@kit.CoreVisionKit';
 import { pdfService } from '@kit.PDFKit';
+import { formBindingData, formProvider } from '@kit.FormKit';
+import { buildFileOpenWant, buildFileSendWant } from '../common/FileOpenWant';
 
 interface CategoryItem {
   name: string;
@@ -32,6 +35,24 @@ interface FileItem {
   manualTag: boolean;
   importedAt: number;
   organizedAt: number;
+  lastAccessedAt?: number;
+}
+
+interface WidgetFileSnapshot {
+  id: number;
+  name: string;
+  kind: string;
+  updated: string;
+  tag: string;
+  color: string;
+  icon: string;
+}
+
+interface WidgetCategorySnapshot {
+  name: string;
+  color: string;
+  icon: string;
+  count: number;
 }
 
 interface SmartRule {
@@ -56,11 +77,13 @@ interface ContentExtraction {
 struct Index {
   private preferenceStore: preferences.Preferences | undefined = undefined;
   @StorageLink('pendingSharedUris') @Watch('onPendingSharedUrisChanged') pendingSharedUris: string = '';
+  @StorageLink('pendingWidgetAction') @Watch('onPendingWidgetActionChanged') pendingWidgetAction: string = '';
   @State query: string = '';
   @State selectedFilter: string = '全部';
   @State selectedTab: string = '收纳箱';
   @State showQuickAdd: boolean = false;
   @State showFileAction: boolean = false;
+  @State showFileDeleteConfirm: boolean = false;
   @State showFileDetail: boolean = false;
   @State showManualConfirm: boolean = false;
   @State showOrganizeSummary: boolean = false;
@@ -72,7 +95,7 @@ struct Index {
   @State deletingCategoryName: string = '';
   @State newCategoryName: string = '';
   @State newCategoryColor: string = '#E9F0FF';
-  @State newCategoryIcon: string = '◇';
+  @State newCategoryIcon: string = '📁';
   @State showCategoryRuleOptions: boolean = false;
   @State newCategoryTitleKeywords: string = '';
   @State newCategoryFormats: string = '';
@@ -89,6 +112,7 @@ struct Index {
   @State pageOffset: number = 0;
   @State newFileName: string = '';
   @State editingRuleId: number = 0;
+  @State ruleListRevision: number = 0;
   @State ruleName: string = '';
   @State ruleTitleKeywords: string = '';
   @State ruleContentKeywords: string = '';
@@ -116,6 +140,12 @@ struct Index {
     { id: 102, name: '生活资料', titleKeywords: '旅行,清单,账单,菜谱,健康', contentKeywords: '', formats: '', targetTag: '生活', enabled: true, isDefault: true },
     { id: 103, name: '图片素材', titleKeywords: '', contentKeywords: '', formats: 'jpg,jpeg,png,heic,gif,svg,raw', targetTag: '灵感', enabled: true, isDefault: true },
     { id: 104, name: '设计与项目包', titleKeywords: '', contentKeywords: '', formats: 'fig,psd,sketch,zip,rar,7z', targetTag: '项目', enabled: true, isDefault: true }
+  ];
+  private categoryIconOptions: string[] = [
+    '📁', '🗂️', '📄', '📑', '📝', '📚',
+    '🎓', '💼', '💻', '🧾', '📊', '📌',
+    '🖼️', '🎬', '🎧', '💡', '🏠', '✈️',
+    '💰', '🩺', '🛒', '🔒', '⭐', '📦'
   ];
 
   aboutToAppear(): void {
@@ -146,7 +176,8 @@ struct Index {
             parseSource: file.parseSource === undefined ? 'API 未调用' : file.parseSource,
             manualTag: file.manualTag === undefined ? false : file.manualTag,
             importedAt: file.importedAt === undefined ? 0 : file.importedAt,
-            organizedAt: file.organizedAt === undefined ? 0 : file.organizedAt
+            organizedAt: file.organizedAt === undefined ? 0 : file.organizedAt,
+            lastAccessedAt: file.lastAccessedAt === undefined ? 0 : file.lastAccessedAt
           };
           return restoredFile;
         });
@@ -180,6 +211,7 @@ struct Index {
       this.syncCategoriesWithRules();
       this.applySmartRules();
       this.consumeSharedFiles();
+      this.consumeWidgetAction();
     } catch (error) {
       this.scanStatus = '等待导入';
     }
@@ -187,6 +219,47 @@ struct Index {
 
   private onPendingSharedUrisChanged(): void {
     this.consumeSharedFiles();
+  }
+
+  private onPendingWidgetActionChanged(): void {
+    this.consumeWidgetAction();
+  }
+
+  private consumeWidgetAction(): void {
+    if (this.pendingWidgetAction.length === 0) {
+      return;
+    }
+    const action: string = this.pendingWidgetAction;
+    this.pendingWidgetAction = '';
+    if (action === 'recent-files') {
+      this.selectedFilter = '全部';
+      this.switchTab('收纳箱');
+      return;
+    }
+    if (action === 'quick-categories') {
+      this.switchTab('分类');
+      return;
+    }
+    if (action === 'add-file') {
+      this.switchTab('收纳箱');
+      this.showQuickAdd = true;
+      return;
+    }
+    if (action.startsWith('category:')) {
+      const category: string = action.substring('category:'.length);
+      if (this.categories.some((item: CategoryItem) => item.name === category)) {
+        this.selectedFilter = category;
+        this.switchTab('收纳箱');
+      }
+      return;
+    }
+    if (action.startsWith('open-file:')) {
+      const id: number = Number(action.substring('open-file:'.length));
+      const target: FileItem | undefined = this.files.find((file: FileItem) => file.id === id);
+      if (target !== undefined) {
+        this.openFile(target);
+      }
+    }
   }
 
   private consumeSharedFiles(): void {
@@ -234,7 +307,8 @@ struct Index {
         parseSource: file.parseSource,
         manualTag: file.manualTag,
         importedAt: file.importedAt,
-        organizedAt: file.organizedAt
+        organizedAt: file.organizedAt,
+        lastAccessedAt: file.lastAccessedAt
       };
       return savedFile;
     });
@@ -245,8 +319,64 @@ struct Index {
       this.preferenceStore.putSync('profile', this.profileType);
       this.preferenceStore.putSync('autoOrganize', this.autoOrganize);
       this.preferenceStore.flush().catch(() => {});
+      this.syncWidgets();
     } catch (error) {
       this.scanStatus = '本地保存失败';
+    }
+  }
+
+  private widgetBindingData(): formBindingData.FormBindingData {
+    const sortedFiles: FileItem[] = [...this.files].sort((left: FileItem, right: FileItem) => {
+      const leftTime: number = Math.max(left.lastAccessedAt === undefined ? 0 : left.lastAccessedAt, left.importedAt);
+      const rightTime: number = Math.max(right.lastAccessedAt === undefined ? 0 : right.lastAccessedAt, right.importedAt);
+      return rightTime - leftTime;
+    });
+    const recentFiles: WidgetFileSnapshot[] = sortedFiles.slice(0, 8).map((file: FileItem) => {
+      const item: WidgetFileSnapshot = {
+        id: file.id,
+        name: file.name,
+        kind: file.kind,
+        updated: file.updated,
+        tag: file.tag,
+        color: file.color,
+        icon: file.icon
+      };
+      return item;
+    });
+    const categoryItems: WidgetCategorySnapshot[] = this.categories.slice(0, 6).map((category: CategoryItem) => {
+      const item: WidgetCategorySnapshot = {
+        name: category.name,
+        color: category.color,
+        icon: category.icon,
+        count: this.categoryCount(category.name)
+      };
+      return item;
+    });
+    const now: Date = new Date();
+    const minutes: string = now.getMinutes() < 10 ? `0${now.getMinutes()}` : `${now.getMinutes()}`;
+    return formBindingData.createFormBindingData({
+      recentFilesJson: JSON.stringify(recentFiles),
+      categoriesJson: JSON.stringify(categoryItems),
+      totalCount: this.files.length,
+      updatedTime: `${now.getHours()}:${minutes}`
+    });
+  }
+
+  private syncWidgets(): void {
+    if (this.preferenceStore === undefined) {
+      return;
+    }
+    try {
+      const value: preferences.ValueType = this.preferenceStore.getSync('widgetFormIds', '[]');
+      if (typeof value !== 'string') {
+        return;
+      }
+      const formIds: string[] = JSON.parse(value) as string[];
+      const data: formBindingData.FormBindingData = this.widgetBindingData();
+      formIds.forEach((formId: string) => {
+        formProvider.updateForm(formId, data).catch(() => {});
+      });
+    } catch (error) {
     }
   }
 
@@ -444,6 +574,10 @@ struct Index {
     return this.rules.filter((rule: SmartRule) => rule.isDefault);
   }
 
+  private ruleCount(isDefault: boolean): number {
+    return this.rules.filter((rule: SmartRule) => rule.isDefault === isDefault).length;
+  }
+
   private moveRule(ruleId: number, direction: number): void {
     const targetRule: SmartRule | undefined = this.rules.find((rule: SmartRule) => rule.id === ruleId);
     if (targetRule === undefined) {
@@ -561,6 +695,7 @@ struct Index {
     this.selectedFilter = '全部';
     this.ruleTargetTag = defaultTargetTag;
     this.rules = [...normalizedCustomRules, ...this.orderedDefaultRules(profile, savedDefaultRules)];
+    this.ruleListRevision += 1;
     this.syncCategoriesWithRules();
     this.applySmartRules();
   }
@@ -573,6 +708,7 @@ struct Index {
       ...this.normalizeCustomRules(customRules, defaultTargetTag),
       ...this.orderedDefaultRules(this.profileType, savedDefaultRules)
     ];
+    this.ruleListRevision += 1;
     this.syncCategoriesWithRules();
   }
 
@@ -832,14 +968,14 @@ struct Index {
   }
 
   @Builder
-  private ruleSection(title: string, rules: SmartRule[]) {
+  private ruleSection(title: string, isDefault: boolean) {
     Text(title)
       .fontSize(13)
       .fontWeight(FontWeight.Medium)
       .fontColor('#7B8795')
       .alignSelf(ItemAlign.Start)
       .margin({ left: 22, top: 6, bottom: 8 })
-    if (rules.length === 0) {
+    if (this.ruleCount(isDefault) === 0) {
       Text('暂无规则')
         .fontSize(12)
         .fontColor('#A0AAB6')
@@ -847,9 +983,11 @@ struct Index {
         .margin({ left: 22, bottom: 10 })
     } else {
       Column({ space: 10 }) {
-        ForEach(rules, (rule: SmartRule, index: number) => {
-          this.ruleRow(rule, index, rules.length)
-        }, (rule: SmartRule) => `${rule.id}-${rule.enabled ? 'on' : 'off'}`)
+        ForEach(this.rules, (rule: SmartRule) => {
+          if (rule.isDefault === isDefault) {
+            this.ruleRow(rule, 0, this.ruleCount(isDefault))
+          }
+          }, (rule: SmartRule) => `${this.ruleListRevision}-${rule.id}-${rule.name}-${rule.targetTag}-${rule.enabled ? 'on' : 'off'}`)
       }
       .width('100%')
       .padding({ left: 20, right: 20, bottom: 12 })
@@ -1074,18 +1212,114 @@ struct Index {
     return `${description} → ${rule.targetTag}`;
   }
 
+  private shouldUseOpenProxy(extension: string): boolean {
+    return ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(extension.toLowerCase());
+  }
+
+  private safeOpenProxyName(file: FileItem): string {
+    const cleanedName: string = file.name.replace(/[\\/:*?"<>|#%]/g, '_');
+    if (cleanedName.length > 0) {
+      return `${file.id}_${cleanedName}`;
+    }
+    return `${file.id}_file.${file.extension}`;
+  }
+
+  private cachedProxyIsCurrent(sourceUri: string, proxyPath: string): boolean {
+    try {
+      const sourceSize: number = fs.statSync(sourceUri).size;
+      const proxySize: number = fs.statSync(proxyPath).size;
+      return proxySize > 0 && proxySize === sourceSize;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  private openUriForFile(file: FileItem, context: common.UIAbilityContext): string {
+    if (!this.shouldUseOpenProxy(file.extension)) {
+      return file.uri;
+    }
+    const directory: string = `${context.filesDir}/open_proxy`;
+    fs.mkdirSync(directory, true);
+    const proxyPath: string = `${directory}/${this.safeOpenProxyName(file)}`;
+    if (!this.cachedProxyIsCurrent(file.uri, proxyPath)) {
+      this.copyAuthorizedFile(file.uri, proxyPath);
+    }
+    return fileUri.getUriFromPath(proxyPath);
+  }
+
   private openFile(file: FileItem): void {
     if (file.uri.length === 0) {
       this.presentTagEditor(file.id);
       return;
     }
-    const context = getContext(this) as common.UIAbilityContext;
-    context.startAbility({
-      action: 'ohos.want.action.viewData',
-      uri: file.uri
-    }).catch(() => {
-      this.scanStatus = `无法打开「${file.name}」`;
+    const accessedAt: number = Date.now();
+    this.files = this.files.map((item: FileItem) => {
+      if (item.id !== file.id) {
+        return item;
+      }
+      const accessedFile: FileItem = {
+        id: item.id,
+        name: item.name,
+        kind: item.kind,
+        size: item.size,
+        updated: '刚刚打开',
+        tag: item.tag,
+        color: item.color,
+        icon: item.icon,
+        uri: item.uri,
+        extension: item.extension,
+        contentText: item.contentText,
+        parseStatus: item.parseStatus,
+        parseSource: item.parseSource,
+        manualTag: item.manualTag,
+        importedAt: item.importedAt,
+        organizedAt: item.organizedAt,
+        lastAccessedAt: accessedAt
+      };
+      return accessedFile;
     });
+    this.fileListRevision += 1;
+    this.persistState();
+    const context = getContext(this) as common.UIAbilityContext;
+    this.scanStatus = `正在打开「${file.name}」`;
+    try {
+      const openUri: string = this.openUriForFile(file, context);
+      const firstWant = this.shouldUseOpenProxy(file.extension)
+        ? buildFileSendWant(openUri, file.extension)
+        : buildFileOpenWant(openUri, file.extension);
+      context.startAbility(firstWant)
+        .then(() => {
+          this.scanStatus = this.shouldUseOpenProxy(file.extension)
+            ? `已把「${file.name}」发送给外部应用`
+            : `已交给外部应用打开「${file.name}」`;
+        })
+        .catch(() => {
+          context.startAbility(buildFileOpenWant(openUri, file.extension))
+            .then(() => {
+              this.scanStatus = `已尝试用打开方式处理「${file.name}」`;
+            })
+            .catch(() => {
+              context.startAbility(buildFileOpenWant(file.uri, file.extension))
+                .then(() => {
+                  this.scanStatus = `已尝试直接打开「${file.name}」`;
+                })
+                .catch(() => {
+                  this.scanStatus = `无法打开「${file.name}」，请重新导入后再试`;
+                });
+            });
+        });
+    } catch (error) {
+      const fallbackWant = this.shouldUseOpenProxy(file.extension)
+        ? buildFileSendWant(file.uri, file.extension)
+        : buildFileOpenWant(file.uri, file.extension);
+      context.startAbility(fallbackWant)
+        .then(() => {
+          this.scanStatus = `已尝试直接发送「${file.name}」`;
+        })
+        .catch(() => {
+          this.scanStatus = `无法打开「${file.name}」，请重新导入后再试`;
+        });
+    }
   }
 
   private animateFileSheetIn(): void {
@@ -1115,6 +1349,34 @@ struct Index {
     this.showFileAction = false;
     this.showFileDetail = true;
     this.animateFileSheetIn();
+  }
+
+  private requestFileDelete(): void {
+    const target: FileItem | undefined = this.files.find((file: FileItem) => file.id === this.selectedFileId);
+    if (target === undefined) {
+      return;
+    }
+    this.selectedFileName = target.name;
+    this.showFileAction = false;
+    this.showFileDetail = false;
+    this.showFileDeleteConfirm = true;
+    this.animateFileSheetIn();
+  }
+
+  private deleteSelectedFileFromApp(): void {
+    const target: FileItem | undefined = this.files.find((file: FileItem) => file.id === this.selectedFileId);
+    if (target === undefined) {
+      this.showFileDeleteConfirm = false;
+      return;
+    }
+    this.files = this.files.filter((file: FileItem) => file.id !== target.id);
+    this.pendingManualConfirmIds = this.pendingManualConfirmIds.filter((id: number) => id !== target.id);
+    this.fileListRevision += 1;
+    this.showFileDeleteConfirm = false;
+    this.selectedFileId = 0;
+    this.selectedFileName = '';
+    this.scanStatus = this.files.length === 0 ? '等待导入' : `已从应用内移除「${target.name}」`;
+    this.persistState();
   }
 
   private handleFileTap(file: FileItem): void {
@@ -1160,6 +1422,8 @@ struct Index {
       this.rules = [...this.rules, rule];
     }
     this.newCategoryName = '';
+    this.newCategoryIcon = '📁';
+    this.newCategoryColor = '#E9F0FF';
     this.newCategoryTitleKeywords = '';
     this.newCategoryFormats = '';
     this.showCategoryRuleOptions = false;
@@ -1490,14 +1754,18 @@ struct Index {
   }
 
   private selectFile(): void {
+    if (this.selectedUris.length >= 100) {
+      this.scanStatus = '最多只能同时添加 100 个文件';
+      return;
+    }
     const documentPicker = new picker.DocumentViewPicker();
     documentPicker.select({
-      maxSelectNumber: 100
+      maxSelectNumber: 100 - this.selectedUris.length
     }).then((uris: Array<string>) => {
       if (uris.length > 0) {
         const mergedUris: string[] = [...this.selectedUris];
         uris.forEach((uri: string) => {
-          if (!mergedUris.includes(uri)) {
+          if (!mergedUris.includes(uri) && mergedUris.length < 100) {
             mergedUris.push(uri);
           }
         });
@@ -1505,6 +1773,16 @@ struct Index {
         this.newFileName = this.fileNameFromUri(mergedUris[0]);
       }
     }).catch(() => {});
+  }
+
+  private removeSelectedUri(uri: string): void {
+    this.selectedUris = this.selectedUris.filter((selectedUri: string) => selectedUri !== uri);
+    this.newFileName = this.selectedUris.length > 0 ? this.fileNameFromUri(this.selectedUris[0]) : '';
+  }
+
+  private clearSelectedUris(): void {
+    this.selectedUris = [];
+    this.newFileName = '';
   }
 
   private retagSelected(tag: string): void {
@@ -1612,9 +1890,9 @@ struct Index {
     Text(`${category.name} ${this.categoryCount(category.name)}`)
       .fontSize(15)
       .fontWeight(FontWeight.Bold)
-      .fontColor(category.name === '待整理' ? '#9A6B17' : '#265F93')
+      .fontColor(this.selectedFilter === category.name ? '#FFFFFF' : (category.name === '待整理' ? '#9A6B17' : '#265F93'))
       .padding({ left: 15, right: 15, top: 9, bottom: 9 })
-      .backgroundColor(category.color)
+      .backgroundColor(this.selectedFilter === category.name ? '#1D2633' : category.color)
       .borderRadius(19)
       .margin({ right: 10, bottom: 10 })
       .onClick(() => {
@@ -1635,6 +1913,38 @@ struct Index {
       .onClick(() => {
         this.selectedFilter = '全部';
       })
+  }
+
+  @Builder
+  private categoryIconOption(icon: string) {
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Text(icon)
+        .fontSize(20)
+        .width(40)
+        .height(40)
+        .textAlign(TextAlign.Center)
+        .backgroundColor(this.newCategoryIcon === icon ? '#FFFFFF' : '#F1F3F5')
+        .borderRadius(14)
+        .border({ width: this.newCategoryIcon === icon ? 2 : 1, color: this.newCategoryIcon === icon ? '#1D2633' : '#E1E6EC' })
+      if (this.newCategoryIcon === icon) {
+        Text('✓')
+          .fontSize(10)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Color.White)
+          .width(18)
+          .height(18)
+          .textAlign(TextAlign.Center)
+          .backgroundColor('#1D2633')
+          .borderRadius(9)
+          .margin({ top: 2, right: 2 })
+      }
+    }
+    .width(40)
+    .height(40)
+    .margin({ right: 8, bottom: 8 })
+    .onClick(() => {
+      this.newCategoryIcon = icon;
+    })
   }
 
   build() {
@@ -1787,7 +2097,7 @@ struct Index {
                   LongPressGesture({ duration: 420, repeat: false })
                     .onAction(() => {
                       this.pressedFileId = 0;
-                      this.presentTagEditor(file.id);
+                      this.presentFileAction(file);
                     }),
                   TapGesture()
                     .onAction(() => {
@@ -1816,6 +2126,8 @@ struct Index {
           }
         }
         .width('100%')
+        .constraintSize({ minHeight: '100%' })
+        .justifyContent(FlexAlign.Start)
       }
       .width('100%')
       .height('100%')
@@ -1878,11 +2190,13 @@ struct Index {
           .backgroundColor('#FFFFFF')
           .borderRadius(18)
           .margin({ left: 20, right: 20, top: 14 })
-            .onClick(() => {
-              this.newCategoryName = '';
-              this.newCategoryTitleKeywords = '';
-              this.newCategoryFormats = '';
-              this.showCategoryRuleOptions = false;
+              .onClick(() => {
+                this.newCategoryName = '';
+                this.newCategoryIcon = '📁';
+                this.newCategoryColor = '#E9F0FF';
+                this.newCategoryTitleKeywords = '';
+                this.newCategoryFormats = '';
+                this.showCategoryRuleOptions = false;
               this.showCategoryEditor = true;
             })
             Text('点击标签即可回到收纳箱查看结果')
@@ -2119,8 +2433,8 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 22, right: 20, bottom: 11 })
-          this.ruleSection('用户规则', this.customRules())
-          this.ruleSection('默认规则', this.defaultRules())
+          this.ruleSection('用户规则', false)
+          this.ruleSection('默认规则', true)
           Blank()
             .height(95)
           }
@@ -2558,7 +2872,7 @@ struct Index {
       if (this.showFileAction) {
         Column() {
           Row() {
-            Text('还没有归纳')
+            Text('文件操作')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
               .fontColor('#1A2532')
@@ -2575,7 +2889,7 @@ struct Index {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 13, bottom: 18 })
-          Text('你可以先归入分类，也可以直接打开文件')
+          Text('可以归纳、打开，或从收纳箱中移除这个文件')
             .fontSize(13)
             .fontColor('#8A96A4')
             .alignSelf(ItemAlign.Start)
@@ -2607,9 +2921,104 @@ struct Index {
               })
           }
           .width('100%')
+          Button('删除')
+            .width('100%')
+            .height(44)
+            .fontSize(15)
+            .fontColor('#B24A4A')
+            .backgroundColor('#FCE7E7')
+            .borderRadius(15)
+            .margin({ top: 10 })
+            .onClick(() => { this.requestFileDelete(); })
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 26 })
+        .backgroundColor('#F7FAFCF2')
+        .backgroundBlurStyle(BlurStyle.Thin)
+        .borderRadius({ topLeft: 26, topRight: 26 })
+        .translate({ x: 0, y: this.fileSheetOffset })
+        .opacity(this.fileSheetOpacity)
+      }
+
+      if (this.showFileDeleteConfirm) {
+        Column() {
+          Row() {
+            Text('删除文件')
+              .fontSize(20)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#1A2532')
+            Blank()
+            Text('×')
+              .fontSize(23)
+              .fontColor('#7D8998')
+              .width(34)
+              .height(34)
+              .textAlign(TextAlign.Center)
+              .onClick(() => { this.showFileDeleteConfirm = false; })
+          }
+          .width('100%')
+          Text(this.selectedFileName)
+            .fontSize(15)
+            .fontColor('#526174')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 12, bottom: 14 })
+          Column() {
+            Text('从应用内移除')
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#263445')
+              .alignSelf(ItemAlign.Start)
+            Text('只删除拾序中的文件记录，系统原文件会保留。')
+              .fontSize(12)
+              .fontColor('#7D8998')
+              .lineHeight(18)
+              .alignSelf(ItemAlign.Start)
+              .margin({ top: 5 })
+          }
+          .width('100%')
+          .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+          .backgroundColor('#F4F6F8')
+          .borderRadius(14)
+          Column() {
+            Text('删除系统原文件')
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#8A96A4')
+              .alignSelf(ItemAlign.Start)
+            Text('当前 HarmonyOS 不向普通应用开放任意公共文档的通用删除权限，请在系统「文件管理」中手动删除。')
+              .fontSize(12)
+              .fontColor('#9AA5B2')
+              .lineHeight(18)
+              .alignSelf(ItemAlign.Start)
+              .margin({ top: 5 })
+          }
+          .width('100%')
+          .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+          .backgroundColor('#EEF1F4')
+          .borderRadius(14)
+          .margin({ top: 9 })
+          Button('仅从应用内移除')
+            .width('100%')
+            .height(46)
+            .fontSize(15)
+            .fontColor(Color.White)
+            .backgroundColor('#B24A4A')
+            .borderRadius(15)
+            .margin({ top: 15 })
+            .onClick(() => { this.deleteSelectedFileFromApp(); })
+          Button('取消')
+            .width('100%')
+            .height(42)
+            .fontSize(14)
+            .fontColor('#526174')
+            .backgroundColor('#E9EDF2')
+            .borderRadius(14)
+            .margin({ top: 9 })
+            .onClick(() => { this.showFileDeleteConfirm = false; })
+        }
+        .width('100%')
+        .padding({ left: 22, right: 22, top: 20, bottom: 24 })
         .backgroundColor('#F7FAFCF2')
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
@@ -2640,11 +3049,10 @@ struct Index {
             .fontSize(13)
             .fontColor('#8A96A4')
             .alignSelf(ItemAlign.Start)
-          Row({ space: 12 }) {
-            Text('▤').fontSize(20).fontColor('#526B93').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '▤' ? '#E9F0FF' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '▤'; })
-            Text('✦').fontSize(20).fontColor('#765AA7').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '✦' ? '#F3E9FF' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '✦'; })
-            Text('◇').fontSize(20).fontColor('#4D826C').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◇' ? '#E5F7EF' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '◇'; })
-            Text('◉').fontSize(20).fontColor('#A5763F').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◉' ? '#FFF0DD' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '◉'; })
+          Flex({ wrap: FlexWrap.Wrap }) {
+            ForEach(this.categoryIconOptions, (icon: string) => {
+              this.categoryIconOption(icon)
+            }, (icon: string) => icon)
           }
           .width('100%')
           .margin({ top: 9, bottom: 14 })
@@ -2901,6 +3309,70 @@ struct Index {
           .margin({ top: 18, bottom: 14 })
           .onClick(() => { this.selectFile(); })
           if (this.selectedUris.length > 0) {
+            Row() {
+              Text(`待添加（${this.selectedUris.length}）`)
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#263445')
+              Blank()
+              Text('清空')
+                .fontSize(13)
+                .fontColor('#8A5A5A')
+                .padding({ left: 10, right: 2, top: 5, bottom: 5 })
+                .onClick(() => { this.clearSelectedUris(); })
+            }
+            .width('100%')
+            .margin({ bottom: 8 })
+            Scroll() {
+              Column({ space: 8 }) {
+                ForEach(this.selectedUris, (uri: string) => {
+                  Row() {
+                    Text('✓')
+                      .fontSize(13)
+                      .fontWeight(FontWeight.Bold)
+                      .fontColor(Color.White)
+                      .width(24)
+                      .height(24)
+                      .textAlign(TextAlign.Center)
+                      .backgroundColor('#4D826C')
+                      .borderRadius(8)
+                    Column() {
+                      Text(this.fileNameFromUri(uri))
+                        .fontSize(14)
+                        .fontWeight(FontWeight.Medium)
+                        .fontColor('#263445')
+                        .maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      Text(`${this.kindFromExtension(this.extensionFromName(this.fileNameFromUri(uri)))} · 已勾选`)
+                        .fontSize(11)
+                        .fontColor('#8A96A4')
+                        .margin({ top: 3 })
+                    }
+                    .alignItems(HorizontalAlign.Start)
+                    .layoutWeight(1)
+                    .margin({ left: 10, right: 8 })
+                    Text('×')
+                      .fontSize(20)
+                      .fontColor('#7D8998')
+                      .width(32)
+                      .height(32)
+                      .textAlign(TextAlign.Center)
+                      .backgroundColor('#E8ECF0')
+                      .borderRadius(10)
+                      .onClick(() => { this.removeSelectedUri(uri); })
+                  }
+                  .width('100%')
+                  .padding({ left: 10, right: 8, top: 9, bottom: 9 })
+                  .backgroundColor('#F4F6F8')
+                  .borderRadius(14)
+                }, (uri: string) => uri)
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .constraintSize({ maxHeight: 210 })
+            .scrollBar(BarState.Auto)
+            .margin({ bottom: 10 })
             Button('+ 继续添加文件')
               .width('100%')
               .height(44)
@@ -2909,15 +3381,15 @@ struct Index {
               .backgroundColor('#E9F0FF')
               .borderRadius(14)
               .margin({ bottom: 10 })
-              .enabled(!this.isIndexing)
+              .enabled(!this.isIndexing && this.selectedUris.length < 100)
               .onClick(() => { this.selectFile(); })
           } else {
             Column() {
-              Text('系统浏览不支持多选？')
+              Text('支持批量勾选')
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
                 .fontColor('#526174')
-              Text('可以每次选择一个，再用“继续添加文件”逐个累加；也可以从系统文件应用多选后分享至“拾序”。')
+              Text('在系统文件页长按一个文件进入多选，继续勾选后一次完成；返回后可在下方逐个移除选错的文件。')
                 .fontSize(11)
                 .fontColor('#8A96A4')
                 .margin({ top: 5 })

@@ -11,13 +11,13 @@
         "autoDesignWidth": true
       },
       "colorMode": "auto",
-      "isDynamic": true,
+      "isDynamic": false,
       "isDefault": true,
       "updateEnabled": true,
       "scheduledUpdateTime": "10:30",
-      "updateDuration": 1,
-      "defaultDimension": "2*2",
-      "supportDimensions": ["2*2"]
+      "updateDuration": 30,
+      "defaultDimension": "2*4",
+      "supportDimensions": ["2*4"]
     },
     {
       "name": "QuickCategoriesWidget",
@@ -30,13 +30,13 @@
         "autoDesignWidth": true
       },
       "colorMode": "auto",
-      "isDynamic": true,
+      "isDynamic": false,
       "isDefault": false,
       "updateEnabled": true,
       "scheduledUpdateTime": "10:30",
-      "updateDuration": 1,
-      "defaultDimension": "2*2",
-      "supportDimensions": ["2*2"]
+      "updateDuration": 30,
+      "defaultDimension": "2*4",
+      "supportDimensions": ["2*4"]
     }
   ]
 }
