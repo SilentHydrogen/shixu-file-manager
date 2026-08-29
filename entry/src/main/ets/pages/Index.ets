@@ -843,6 +843,7 @@ struct Index {
     .padding({ left: 16, right: 16, top: 15, bottom: 15 })
     .backgroundColor($r('app.color.card_bg'))
     .borderRadius(18)
+    .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
   }
 
   @Builder
@@ -1591,6 +1592,7 @@ struct Index {
     .padding({ left: 14, right: 14, top: 13, bottom: 13 })
     .backgroundColor($r('app.color.card_bg'))
     .borderRadius(19)
+    .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
     .gesture(
       GestureGroup(GestureMode.Exclusive,
         LongPressGesture({ duration: 450, repeat: false })
@@ -1784,6 +1786,7 @@ struct Index {
               .padding({ left: 14, right: 14, top: 12, bottom: 12 })
               .backgroundColor($r('app.color.card_bg'))
               .borderRadius(18)
+              .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
               .scale({
                 x: this.pressedFileId === file.id ? 0.985 : 1,
                 y: this.pressedFileId === file.id ? 0.985 : 1
@@ -1892,6 +1895,7 @@ struct Index {
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
           .margin({ left: 20, right: 20, top: 14 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
             .onClick(() => {
               this.newCategoryName = '';
               this.newCategoryTitleKeywords = '';
@@ -1963,6 +1967,7 @@ struct Index {
           .padding({ left: 16, right: 16, top: 15, bottom: 15 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
           Text('文件范围')
             .fontSize(13)
             .fontColor($r('app.color.text_caption'))
@@ -1988,6 +1993,7 @@ struct Index {
           .padding({ left: 16, right: 16, top: 15, bottom: 15 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
           Text('关于收纳箱')
             .fontSize(13)
             .fontColor($r('app.color.text_caption'))
@@ -2006,6 +2012,7 @@ struct Index {
           .padding({ left: 16, right: 16, top: 16, bottom: 16 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
         }
         .width('100%')
         .height('100%')
@@ -2070,6 +2077,7 @@ struct Index {
           .backgroundColor($r('app.color.tint_blue_strong'))
           .borderRadius(22)
           .margin({ left: 20, right: 20, bottom: 22 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
           Text('你的使用方式')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
@@ -2250,6 +2258,7 @@ struct Index {
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
         }
         .width('100%')
         .height('100%')
@@ -2295,6 +2304,7 @@ struct Index {
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
         }
         .width('100%')
         .height('100%')
@@ -2340,6 +2350,7 @@ struct Index {
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
         }
         .width('100%')
         .height('100%')
@@ -2462,6 +2473,7 @@ struct Index {
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
         }
         .width('100%')
         .height('100%')
@@ -2562,6 +2574,7 @@ struct Index {
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
         }
         .width('100%')
         .height('100%')
