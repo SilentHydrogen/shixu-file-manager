@@ -29,14 +29,15 @@ export class FileRepository {
 
     const resultSet = await store.query(predicates)
 
-    if (resultSet.goToFirstRow()) {
-      const rowData = this.resultSetToObject(resultSet)
+    try {
+      if (resultSet.goToFirstRow()) {
+        const rowData = this.resultSetToObject(resultSet)
+        return FileInfo.fromRow(rowData)
+      }
+      return null
+    } finally {
       resultSet.close()
-      return FileInfo.fromRow(rowData)
     }
-
-    resultSet.close()
-    return null
   }
 
   /**
@@ -52,13 +53,15 @@ export class FileRepository {
     const resultSet = await store.query(predicates)
     const files: FileInfo[] = []
 
-    while (resultSet.goToNextRow()) {
-      const rowData = this.resultSetToObject(resultSet)
-      files.push(FileInfo.fromRow(rowData))
+    try {
+      while (resultSet.goToNextRow()) {
+        const rowData = this.resultSetToObject(resultSet)
+        files.push(FileInfo.fromRow(rowData))
+      }
+      return files
+    } finally {
+      resultSet.close()
     }
-
-    resultSet.close()
-    return files
   }
 
   /**
@@ -103,14 +106,15 @@ export class FileRepository {
 
     const resultSet = await store.query(predicates)
 
-    if (resultSet.goToFirstRow()) {
-      const rowData = this.resultSetToObject(resultSet)
+    try {
+      if (resultSet.goToFirstRow()) {
+        const rowData = this.resultSetToObject(resultSet)
+        return FileInfo.fromRow(rowData)
+      }
+      return null
+    } finally {
       resultSet.close()
-      return FileInfo.fromRow(rowData)
     }
-
-    resultSet.close()
-    return null
   }
 
   /**
@@ -131,14 +135,15 @@ export class FileRepository {
     const sql = `SELECT COUNT(*) as count FROM ${DatabaseConfig.TABLE_FILES} WHERE is_processed = 0`
     const resultSet = await store.querySql(sql)
 
-    if (resultSet.goToFirstRow()) {
-      const count = resultSet.getLong(0)
+    try {
+      if (resultSet.goToFirstRow()) {
+        const count = resultSet.getLong(0)
+        return count
+      }
+      return 0
+    } finally {
       resultSet.close()
-      return count
     }
-
-    resultSet.close()
-    return 0
   }
 
   /**
