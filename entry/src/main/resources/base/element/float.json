@@ -1,8 +1,18 @@
 {
   "float": [
-    {
-      "name": "page_text_font_size",
-      "value": "50fp"
-    }
+    { "name": "page_text_font_size", "value": "50fp" },
+
+    { "name": "font_size_xl", "value": "40fp" },
+    { "name": "font_size_lg", "value": "30fp" },
+    { "name": "font_size_md", "value": "20fp" },
+    { "name": "font_size_body_lg", "value": "18fp" },
+    { "name": "font_size_body", "value": "16fp" },
+    { "name": "font_size_caption", "value": "14fp" },
+    { "name": "font_size_micro", "value": "12fp" },
+
+    { "name": "radius_sm", "value": "12vp" },
+    { "name": "radius_md", "value": "16vp" },
+    { "name": "radius_lg", "value": "20vp" },
+    { "name": "radius_pill", "value": "999vp" }
   ]
 }
