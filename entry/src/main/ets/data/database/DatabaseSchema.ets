@@ -8,7 +8,8 @@ export class DatabaseSchema {
       this.createCollectionsTable(),
       this.createFileCollectionRefsTable(),
       this.createVectorStorageTiersTable(),
-      this.createRagAnalysisLogsTable()
+      this.createRagAnalysisLogsTable(),
+      this.createFileEmbeddingsTable()
     ]
   }
 
@@ -87,6 +88,17 @@ export class DatabaseSchema {
         llm_tokens_used INTEGER,
         status TEXT,
         error_message TEXT
+      )
+    `
+  }
+
+  private static createFileEmbeddingsTable(): string {
+    return `
+      CREATE TABLE IF NOT EXISTS file_embeddings (
+        file_id INTEGER PRIMARY KEY,
+        embedding_vector TEXT NOT NULL,
+        created_time INTEGER NOT NULL,
+        FOREIGN KEY (file_id) REFERENCES files(id)
       )
     `
   }
