@@ -1763,6 +1763,40 @@ struct Index {
           .width('100%')
           .padding({ left: 22, right: 22, bottom: 12 })
 
+          Row({ space: 8 }) {
+            Text('🔍')
+              .fontSize(14)
+              .fontColor($r('app.color.text_disabled'))
+            TextInput({ text: this.query, placeholder: '搜索文件名或标签' })
+              .layoutWeight(1)
+              .height(36)
+              .fontSize(14)
+              .fontColor($r('app.color.text_primary'))
+              .placeholderColor($r('app.color.text_disabled'))
+              .placeholderFont({ size: 14 })
+              .backgroundColor(Color.Transparent)
+              .onChange((value: string) => {
+                this.query = value;
+              })
+            if (this.query.length > 0) {
+              Text('×')
+                .fontSize(16)
+                .fontColor($r('app.color.text_disabled'))
+                .width(20)
+                .height(20)
+                .textAlign(TextAlign.Center)
+                .onClick(() => {
+                  this.query = '';
+                })
+            }
+          }
+          .width('100%')
+          .height(44)
+          .padding({ left: 14, right: 12 })
+          .backgroundColor($r('app.color.tint_gray'))
+          .borderRadius(16)
+          .margin({ left: 22, right: 22, bottom: 14 })
+
           Column({ space: 10 }) {
             ForEach(this.visibleFiles(), (file: FileItem) => {
               Row() {
