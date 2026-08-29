@@ -81,6 +81,8 @@ struct Index {
   @State autoOrganize: boolean = true;
   @State showAllHomeCategories: boolean = false;
   @State scanStatus: string = '等待导入';
+  @State scanStatusType: string = 'idle';
+  private scanStatusTimer: number = -1;
   @State profileType: string = '通用';
   @State showRuleEditor: boolean = false;
   @State showRuleDeleteConfirm: boolean = false;
@@ -183,11 +185,27 @@ struct Index {
       this.consumeSharedFiles();
     } catch (error) {
       this.scanStatus = '等待导入';
+      this.scanStatusType = 'idle';
     }
   }
 
   private onPendingSharedUrisChanged(): void {
     this.consumeSharedFiles();
+  }
+
+  private flashScanStatus(type: string, message: string): void {
+    if (this.scanStatusTimer !== -1) {
+      clearTimeout(this.scanStatusTimer);
+      this.scanStatusTimer = -1;
+    }
+    this.scanStatus = message;
+    this.scanStatusType = type;
+    if (type === 'success' || type === 'error') {
+      this.scanStatusTimer = setTimeout(() => {
+        this.scanStatusType = 'idle';
+        this.scanStatusTimer = -1;
+      }, type === 'error' ? 3000 : 2600);
+    }
   }
 
   private onPendingCardRouteChanged(): void {
@@ -223,7 +241,7 @@ struct Index {
       }
     } catch (error) {
       this.pendingSharedUris = '';
-      this.scanStatus = '没有读取到分享的文件';
+      this.flashScanStatus('error', '没有读取到分享的文件');
     }
   }
 
@@ -260,7 +278,7 @@ struct Index {
       this.preferenceStore.putSync('autoOrganize', this.autoOrganize);
       this.preferenceStore.flush().catch(() => {});
     } catch (error) {
-      this.scanStatus = '本地保存失败';
+      this.flashScanStatus('error', '本地保存失败');
     }
   }
 
@@ -983,7 +1001,7 @@ struct Index {
 
   private applySmartRules(): void {
     if (!this.autoOrganize) {
-      this.scanStatus = '自动整理已暂停';
+      this.flashScanStatus('success', '自动整理已暂停');
       this.persistState();
       return;
     }
@@ -1001,7 +1019,11 @@ struct Index {
     });
     this.lastOrganizedCount = organized;
     this.lastOrganizeChangedCount = changed;
-    this.scanStatus = this.files.length === 0 ? '等待导入' : `已整理 ${organized} 个`;
+    if (this.files.length === 0) {
+      this.flashScanStatus('idle', '等待导入');
+    } else {
+      this.flashScanStatus('success', `已整理 ${organized} 个`);
+    }
     this.persistState();
   }
 
@@ -1073,7 +1095,11 @@ struct Index {
     this.showManualConfirm = false;
     this.pendingManualConfirmIds = [];
     this.lastOrganizedCount = this.files.filter((file: FileItem) => file.tag !== '待整理').length;
-    this.scanStatus = this.files.length === 0 ? '等待导入' : `已整理 ${this.lastOrganizedCount} 个`;
+    if (this.files.length === 0) {
+      this.flashScanStatus('idle', '等待导入');
+    } else {
+      this.flashScanStatus('success', `已整理 ${this.lastOrganizedCount} 个`);
+    }
     this.persistState();
     this.showOrganizeSummary = true;
   }
@@ -1099,7 +1125,7 @@ struct Index {
       action: 'ohos.want.action.viewData',
       uri: file.uri
     }).catch(() => {
-      this.scanStatus = `无法打开「${file.name}」`;
+      this.flashScanStatus('error', `无法打开「${file.name}」`);
     });
   }
 
@@ -1470,7 +1496,7 @@ struct Index {
     for (let index: number = 0; index < this.selectedUris.length; index++) {
       const uri: string = this.selectedUris[index];
       if (!this.files.some((file: FileItem) => file.uri === uri)) {
-        this.scanStatus = `正在导入 ${index + 1}/${this.selectedUris.length}`;
+        this.flashScanStatus('progress', `正在导入 ${index + 1}/${this.selectedUris.length}`);
         const name: string = this.fileNameFromUri(uri);
         const extension: string = this.extensionFromName(name);
         const pending: CategoryItem = this.categoryByName('待整理');
@@ -3029,6 +3055,40 @@ struct Index {
         .borderRadius({ topLeft: 26, topRight: 26 })
         .translate({ x: 0, y: this.fileSheetOffset })
         .opacity(this.fileSheetOpacity)
+      }
+
+      if (this.scanStatusType !== 'idle') {
+        Row() {
+          Row({ space: 8 }) {
+            if (this.scanStatusType === 'progress') {
+              LoadingProgress()
+                .width(16)
+                .height(16)
+                .color($r('app.color.accent_blue'))
+            } else {
+              Text(this.scanStatusType === 'error' ? '!' : '✓')
+                .fontSize(13)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.scanStatusType === 'error' ? $r('app.color.accent_red') : $r('app.color.accent_green'))
+                .width(16)
+                .height(16)
+                .textAlign(TextAlign.Center)
+            }
+            Text(this.scanStatus)
+              .fontSize(13)
+              .fontColor($r('app.color.text_body'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .padding({ left: 16, right: 18, top: 10, bottom: 10 })
+          .backgroundColor($r('app.color.card_bg'))
+          .borderRadius(20)
+          .shadow({ radius: 12, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 4 })
+          .constraintSize({ maxWidth: '82%' })
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .position({ x: 0, y: 52 })
       }
     }
     .width('100%')
