@@ -1,0 +1,175 @@
+// entry/src/main/ets/data/repository/FileRepository.ets
+
+import relationalStore from '@ohos.data.relationalStore'
+import { DatabaseManager } from '../database/DatabaseManager'
+import { DatabaseConfig } from '../database/DatabaseConfig'
+import { FileInfo } from '../model/FileInfo'
+
+export class FileRepository {
+  private async getStore(): Promise<relationalStore.RdbStore> {
+    return await DatabaseManager.getInstance().getStore()
+  }
+
+  /**
+   * 插入文件记录
+   */
+  async insert(fileInfo: FileInfo): Promise<number> {
+    const store = await this.getStore()
+    const values = fileInfo.toValuesBucket()
+    return await store.insert(DatabaseConfig.TABLE_FILES, values)
+  }
+
+  /**
+   * 根据 URI 查询文件
+   */
+  async findByUri(uri: string): Promise<FileInfo | null> {
+    const store = await this.getStore()
+    const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
+    predicates.equalTo('uri', uri)
+
+    const resultSet = await store.query(predicates)
+
+    if (resultSet.goToFirstRow()) {
+      const rowData = this.resultSetToObject(resultSet)
+      resultSet.close()
+      return FileInfo.fromRow(rowData)
+    }
+
+    resultSet.close()
+    return null
+  }
+
+  /**
+   * 查询未处理的文件
+   */
+  async findUnprocessed(limit: number = 100): Promise<FileInfo[]> {
+    const store = await this.getStore()
+    const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
+    predicates.equalTo('is_processed', 0)
+    predicates.orderByDesc('created_time')
+    predicates.limit(limit)
+
+    const resultSet = await store.query(predicates)
+    const files: FileInfo[] = []
+
+    while (resultSet.goToNextRow()) {
+      const rowData = this.resultSetToObject(resultSet)
+      files.push(FileInfo.fromRow(rowData))
+    }
+
+    resultSet.close()
+    return files
+  }
+
+  /**
+   * 标记文件为已处理
+   */
+  async markAsProcessed(fileId: number): Promise<void> {
+    const store = await this.getStore()
+    const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
+    predicates.equalTo('id', fileId)
+
+    const values = {
+      is_processed: 1,
+      processed_time: Date.now()
+    }
+
+    await store.update(values, predicates)
+  }
+
+  /**
+   * 更新文件内容摘要和关键词
+   */
+  async updateContentSummary(fileId: number, summary: string, keywords: string[]): Promise<void> {
+    const store = await this.getStore()
+    const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
+    predicates.equalTo('id', fileId)
+
+    const values = {
+      content_summary: summary,
+      extracted_keywords: JSON.stringify(keywords)
+    }
+
+    await store.update(values, predicates)
+  }
+
+  /**
+   * 根据 ID 查询文件
+   */
+  async findById(id: number): Promise<FileInfo | null> {
+    const store = await this.getStore()
+    const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
+    predicates.equalTo('id', id)
+
+    const resultSet = await store.query(predicates)
+
+    if (resultSet.goToFirstRow()) {
+      const rowData = this.resultSetToObject(resultSet)
+      resultSet.close()
+      return FileInfo.fromRow(rowData)
+    }
+
+    resultSet.close()
+    return null
+  }
+
+  /**
+   * 删除文件记录
+   */
+  async deleteById(id: number): Promise<void> {
+    const store = await this.getStore()
+    const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
+    predicates.equalTo('id', id)
+    await store.delete(predicates)
+  }
+
+  /**
+   * 获取未处理文件数量
+   */
+  async countUnprocessed(): Promise<number> {
+    const store = await this.getStore()
+    const sql = `SELECT COUNT(*) as count FROM ${DatabaseConfig.TABLE_FILES} WHERE is_processed = 0`
+    const resultSet = await store.querySql(sql)
+
+    if (resultSet.goToFirstRow()) {
+      const count = resultSet.getLong(0)
+      resultSet.close()
+      return count
+    }
+
+    resultSet.close()
+    return 0
+  }
+
+  /**
+   * 辅助方法：将 ResultSet 当前行转换为对象
+   */
+  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, any> {
+    const columnNames = resultSet.columnNames
+    const row: Record<string, any> = {}
+
+    for (let i = 0; i < columnNames.length; i++) {
+      const columnName = columnNames[i]
+      const columnType = resultSet.getColumnType(i)
+
+      switch (columnType) {
+        case relationalStore.ColumnType.TYPE_INTEGER:
+          row[columnName] = resultSet.getLong(i)
+          break
+        case relationalStore.ColumnType.TYPE_FLOAT:
+          row[columnName] = resultSet.getDouble(i)
+          break
+        case relationalStore.ColumnType.TYPE_STRING:
+          row[columnName] = resultSet.getString(i)
+          break
+        case relationalStore.ColumnType.TYPE_BLOB:
+          row[columnName] = resultSet.getBlob(i)
+          break
+        default:
+          row[columnName] = null
+      }
+    }
+
+    return row
+  }
+}
