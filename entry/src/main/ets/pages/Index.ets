@@ -104,8 +104,6 @@ struct Index {
   @State isIndexing: boolean = false;
   @State pressedFileId: number = 0;
   @State sortingRuleId: number = 0;
-  @State fileSheetOffset: number = 24;
-  @State fileSheetOpacity: number = 0;
   @State files: FileItem[] = [];
   @State categories: CategoryItem[] = [
     { name: '工作', color: '#E9F0FF', icon: '▤', subtitle: '会议、规范与交付物' },
@@ -1129,21 +1127,11 @@ struct Index {
     });
   }
 
-  private animateFileSheetIn(): void {
-    this.fileSheetOffset = 24;
-    this.fileSheetOpacity = 0;
-    animateToImmediately({ curve: curves.springMotion(0.32, 1.0, 0.02) }, () => {
-      this.fileSheetOffset = 0;
-      this.fileSheetOpacity = 1;
-    });
-  }
-
   private presentFileAction(file: FileItem): void {
     this.selectedFileId = file.id;
     this.selectedFileName = file.name;
     this.showFileDetail = false;
     this.showFileAction = true;
-    this.animateFileSheetIn();
   }
 
   private presentTagEditor(fileId: number): void {
@@ -1155,7 +1143,6 @@ struct Index {
     this.selectedFileName = currentFile.name;
     this.showFileAction = false;
     this.showFileDetail = true;
-    this.animateFileSheetIn();
   }
 
   private handleFileTap(file: FileItem): void {
@@ -2319,12 +2306,14 @@ struct Index {
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
           .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showRuleDeleteConfirm) {
@@ -2365,12 +2354,14 @@ struct Index {
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
           .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showCategoryDeleteConfirm) {
@@ -2411,12 +2402,14 @@ struct Index {
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
           .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showManualConfirm) {
@@ -2534,12 +2527,14 @@ struct Index {
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
           .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showOrganizeSummary) {
@@ -2635,11 +2630,13 @@ struct Index {
           .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
           .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showFileAction) {
@@ -2700,8 +2697,9 @@ struct Index {
         .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
-        .translate({ x: 0, y: this.fileSheetOffset })
-        .opacity(this.fileSheetOpacity)
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showCategoryEditor) {
@@ -2850,6 +2848,9 @@ struct Index {
         .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showRuleEditor) {
@@ -2937,6 +2938,9 @@ struct Index {
         .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showQuickAdd) {
@@ -3031,6 +3035,9 @@ struct Index {
         .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showFileDetail) {
@@ -3087,8 +3094,9 @@ struct Index {
         .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
-        .translate({ x: 0, y: this.fileSheetOffset })
-        .opacity(this.fileSheetOpacity)
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.scanStatusType !== 'idle') {
@@ -3123,6 +3131,9 @@ struct Index {
         .width('100%')
         .justifyContent(FlexAlign.Center)
         .position({ x: 0, y: 52 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: -20 }))
+          .animation({ duration: 250, curve: Curve.EaseOut }))
       }
     }
     .width('100%')
