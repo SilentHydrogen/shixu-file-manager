@@ -56,6 +56,7 @@ interface ContentExtraction {
 struct Index {
   private preferenceStore: preferences.Preferences | undefined = undefined;
   @StorageLink('pendingSharedUris') @Watch('onPendingSharedUrisChanged') pendingSharedUris: string = '';
+  @StorageLink('pendingCardRoute') @Watch('onPendingCardRouteChanged') pendingCardRoute: string = '';
   @State query: string = '';
   @State selectedFilter: string = '全部';
   @State selectedTab: string = '收纳箱';
@@ -187,6 +188,19 @@ struct Index {
 
   private onPendingSharedUrisChanged(): void {
     this.consumeSharedFiles();
+  }
+
+  private onPendingCardRouteChanged(): void {
+    if (this.pendingCardRoute.length === 0) {
+      return;
+    }
+    const route: string = this.pendingCardRoute;
+    this.pendingCardRoute = '';
+    if (route === 'quick-categories') {
+      this.switchTab('分类');
+    } else if (route === 'recent-files') {
+      this.switchTab('收纳箱');
+    }
   }
 
   private consumeSharedFiles(): void {
