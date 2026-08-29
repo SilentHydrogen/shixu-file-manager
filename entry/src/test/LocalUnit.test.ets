@@ -3,12 +3,14 @@ import databaseManagerTest from './ets/data/DatabaseManagerTest';
 import fileInfoTest from './ets/data/FileInfoTest';
 import fileRepositoryTest from './ets/data/FileRepositoryTest';
 import collectionRepositoryTest from './ets/data/CollectionRepositoryTest';
+import fileCollectionRefRepositoryTest from './ets/data/FileCollectionRefRepositoryTest';
 
 export default function localUnitTest() {
   databaseManagerTest();
   fileInfoTest();
   fileRepositoryTest();
   collectionRepositoryTest();
+  fileCollectionRefRepositoryTest();
 
   describe('localUnitTest', () => {
     // Defines a test suite. Two parameters are supported: test suite name and test suite function.
