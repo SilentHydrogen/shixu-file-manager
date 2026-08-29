@@ -13,6 +13,7 @@
     { "name": "radius_sm", "value": "12vp" },
     { "name": "radius_md", "value": "16vp" },
     { "name": "radius_lg", "value": "20vp" },
+    { "name": "radius_xl", "value": "24vp" },
     { "name": "radius_pill", "value": "999vp" }
   ]
 }
