@@ -2,11 +2,13 @@ import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from
 import databaseManagerTest from './ets/data/DatabaseManagerTest';
 import fileInfoTest from './ets/data/FileInfoTest';
 import fileRepositoryTest from './ets/data/FileRepositoryTest';
+import collectionRepositoryTest from './ets/data/CollectionRepositoryTest';
 
 export default function localUnitTest() {
   databaseManagerTest();
   fileInfoTest();
   fileRepositoryTest();
+  collectionRepositoryTest();
 
   describe('localUnitTest', () => {
     // Defines a test suite. Two parameters are supported: test suite name and test suite function.
