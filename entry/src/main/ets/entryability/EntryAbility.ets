@@ -1,12 +1,22 @@
 import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { DatabaseManager } from '../data/database/DatabaseManager';
 
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
-  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+  async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): Promise<void> {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+
+    // 初始化数据库
+    try {
+      await DatabaseManager.getInstance().init(this.context);
+      hilog.info(DOMAIN, 'testTag', '%{public}s', '[EntryAbility] Database initialized successfully');
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', '[EntryAbility] Database initialization failed: %{public}s', JSON.stringify(err));
+    }
+
     AppStorage.setOrCreate('pendingSharedUris', '');
     this.receiveSharedFiles(want);
   }
@@ -42,6 +52,8 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
+    // 关闭数据库
+    DatabaseManager.getInstance().close();
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
