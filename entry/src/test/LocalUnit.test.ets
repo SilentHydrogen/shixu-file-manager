@@ -6,6 +6,8 @@ import collectionRepositoryTest from './ets/data/CollectionRepositoryTest';
 import fileCollectionRefRepositoryTest from './ets/data/FileCollectionRefRepositoryTest';
 import vectorStorageTierRepositoryTest from './ets/data/VectorStorageTierRepositoryTest';
 import ragAnalysisLogRepositoryTest from './ets/data/RagAnalysisLogRepositoryTest';
+import fileProcessingQueueTest from './ets/service/FileProcessingQueueTest';
+import ragAnalysisServiceTest from './ets/service/RagAnalysisServiceTest';
 
 export default function localUnitTest() {
   databaseManagerTest();
@@ -15,6 +17,8 @@ export default function localUnitTest() {
   fileCollectionRefRepositoryTest();
   vectorStorageTierRepositoryTest();
   ragAnalysisLogRepositoryTest();
+  fileProcessingQueueTest();
+  ragAnalysisServiceTest();
 
   describe('localUnitTest', () => {
     // Defines a test suite. Two parameters are supported: test suite name and test suite function.
