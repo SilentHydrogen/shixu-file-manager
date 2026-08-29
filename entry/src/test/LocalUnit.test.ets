@@ -4,6 +4,7 @@ import fileInfoTest from './ets/data/FileInfoTest';
 import fileRepositoryTest from './ets/data/FileRepositoryTest';
 import collectionRepositoryTest from './ets/data/CollectionRepositoryTest';
 import fileCollectionRefRepositoryTest from './ets/data/FileCollectionRefRepositoryTest';
+import vectorStorageTierRepositoryTest from './ets/data/VectorStorageTierRepositoryTest';
 
 export default function localUnitTest() {
   databaseManagerTest();
@@ -11,6 +12,7 @@ export default function localUnitTest() {
   fileRepositoryTest();
   collectionRepositoryTest();
   fileCollectionRefRepositoryTest();
+  vectorStorageTierRepositoryTest();
 
   describe('localUnitTest', () => {
     // Defines a test suite. Two parameters are supported: test suite name and test suite function.
