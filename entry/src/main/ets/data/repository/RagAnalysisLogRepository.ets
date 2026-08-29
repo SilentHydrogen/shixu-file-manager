@@ -132,8 +132,8 @@ export class RagAnalysisLogRepository {
     let sql = `
       SELECT
         COUNT(*) as total_batches,
-        SUM(file_count) as total_files,
-        SUM(llm_tokens_used) as total_tokens,
+        COALESCE(SUM(file_count), 0) as total_files,
+        COALESCE(SUM(llm_tokens_used), 0) as total_tokens,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
         AVG(CASE WHEN end_time IS NOT NULL THEN end_time - start_time ELSE NULL END) as avg_duration
       FROM ${DatabaseConfig.TABLE_RAG_ANALYSIS_LOGS}
@@ -153,7 +153,7 @@ export class RagAnalysisLogRepository {
         const totalFiles = resultSet.getLong(1)
         const totalTokens = resultSet.getLong(2)
         const completed = resultSet.getLong(3)
-        const avgDuration = resultSet.getDouble(4)
+        const avgDuration = resultSet.isColumnNull(4) ? 0 : resultSet.getDouble(4)
 
         const successRate = totalBatches > 0 ? (completed / totalBatches) * 100 : 0
 
