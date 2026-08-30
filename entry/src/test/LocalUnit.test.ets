@@ -8,6 +8,9 @@ import vectorStorageTierRepositoryTest from './ets/data/VectorStorageTierReposit
 import ragAnalysisLogRepositoryTest from './ets/data/RagAnalysisLogRepositoryTest';
 import fileProcessingQueueTest from './ets/service/FileProcessingQueueTest';
 import ragAnalysisServiceTest from './ets/service/RagAnalysisServiceTest';
+import promptTemplatesTest from './ets/llm/PromptTemplatesTest';
+import llmConfigTest from './ets/llm/LLMConfigTest';
+import llmServiceTest from './ets/llm/LLMServiceTest';
 
 export default function localUnitTest() {
   databaseManagerTest();
@@ -19,6 +22,11 @@ export default function localUnitTest() {
   ragAnalysisLogRepositoryTest();
   fileProcessingQueueTest();
   ragAnalysisServiceTest();
+
+  // LLM Tests
+  promptTemplatesTest();
+  llmConfigTest();
+  llmServiceTest();
 
   describe('localUnitTest', () => {
     // Defines a test suite. Two parameters are supported: test suite name and test suite function.
