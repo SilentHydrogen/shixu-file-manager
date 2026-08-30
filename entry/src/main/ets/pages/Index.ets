@@ -104,6 +104,7 @@ struct Index {
   @State isIndexing: boolean = false;
   @State pressedFileId: number = 0;
   @State sortingRuleId: number = 0;
+  @State ruleListRevision: number = 0;
   @State files: FileItem[] = [];
   @State categories: CategoryItem[] = [
     { name: '工作', color: '#E9F0FF', icon: '▤', subtitle: '会议、规范与交付物' },
@@ -474,6 +475,10 @@ struct Index {
     return this.rules.filter((rule: SmartRule) => rule.isDefault);
   }
 
+  private ruleCount(isDefault: boolean): number {
+    return this.rules.filter((rule: SmartRule) => rule.isDefault === isDefault).length;
+  }
+
   private moveRule(ruleId: number, direction: number): void {
     const targetRule: SmartRule | undefined = this.rules.find((rule: SmartRule) => rule.id === ruleId);
     if (targetRule === undefined) {
@@ -591,6 +596,7 @@ struct Index {
     this.selectedFilter = '全部';
     this.ruleTargetTag = defaultTargetTag;
     this.rules = [...normalizedCustomRules, ...this.orderedDefaultRules(profile, savedDefaultRules)];
+    this.ruleListRevision += 1;
     this.syncCategoriesWithRules();
     this.applySmartRules();
   }
@@ -603,6 +609,7 @@ struct Index {
       ...this.normalizeCustomRules(customRules, defaultTargetTag),
       ...this.orderedDefaultRules(this.profileType, savedDefaultRules)
     ];
+    this.ruleListRevision += 1;
     this.syncCategoriesWithRules();
   }
 
@@ -863,14 +870,14 @@ struct Index {
   }
 
   @Builder
-  private ruleSection(title: string, rules: SmartRule[]) {
+  private ruleSection(title: string, isDefault: boolean) {
     Text(title)
       .fontSize(13)
       .fontWeight(FontWeight.Medium)
       .fontColor($r('app.color.text_caption'))
       .alignSelf(ItemAlign.Start)
       .margin({ left: 22, top: 6, bottom: 8 })
-    if (rules.length === 0) {
+    if (this.ruleCount(isDefault) === 0) {
       Text('暂无规则')
         .fontSize(12)
         .fontColor($r('app.color.text_disabled'))
@@ -878,9 +885,11 @@ struct Index {
         .margin({ left: 22, bottom: 10 })
     } else {
       Column({ space: 10 }) {
-        ForEach(rules, (rule: SmartRule, index: number) => {
-          this.ruleRow(rule, index, rules.length)
-        }, (rule: SmartRule) => `${rule.id}-${rule.enabled ? 'on' : 'off'}`)
+        ForEach(this.rules, (rule: SmartRule) => {
+          if (rule.isDefault === isDefault) {
+            this.ruleRow(rule, 0, this.ruleCount(isDefault))
+          }
+        }, (rule: SmartRule) => `${this.ruleListRevision}-${rule.id}-${rule.name}-${rule.targetTag}-${rule.enabled ? 'on' : 'off'}`)
       }
       .width('100%')
       .padding({ left: 20, right: 20, bottom: 12 })
@@ -2188,8 +2197,8 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 22, right: 20, bottom: 11 })
-          this.ruleSection('用户规则', this.customRules())
-          this.ruleSection('默认规则', this.defaultRules())
+          this.ruleSection('用户规则', false)
+          this.ruleSection('默认规则', true)
           Blank()
             .height(95)
           }
