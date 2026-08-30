@@ -4,19 +4,21 @@
   "taskId": null,
   "sessionId": "session-20260830-profile-rule-refresh",
   "status": "approved_with_notes",
-  "whatChanged": "在 Index.ets 中增加 ruleListRevision，并让整理规则 Builder 直接依赖当前 rules；切换使用方式和刷新规则时递增版本号，ForEach key 包含该版本号。",
+  "whatChanged": "在 Index.ets 中增加 ruleListRevision，并让整理规则 Builder 直接依赖当前 rules；切换使用方式和刷新规则时递增版本号，ForEach key 包含该版本号；将 build-profile.json5 的 targetSdkVersion 和 compatibleSdkVersion 调整为本机已安装的 6.1.0(23)。",
   "why": "修复切换到程序员等使用方式后，规则数据已更新但 ArkUI 复用旧列表节点、智能栏未立即显示新规则的问题。",
-  "risk": "改动仅限规则列表渲染和场景切换状态；ArkUI 真机渲染行为尚未在当前环境编译验证。规则行位置参数原本未参与渲染逻辑，改为按过滤条件渲染不会改变排序数据。",
+  "risk": "改动仅限规则列表渲染、场景切换状态和构建 SDK 声明；规则行位置参数原本未参与渲染逻辑，改为按过滤条件渲染不会改变排序数据。",
   "validation": [
     "git diff --check 通过",
     "静态回归检查：origin/main 基线为 RED，修复分支的版本状态、递增逻辑、ForEach key 和 Builder 调用均为 PASS",
-    "未验证：DevEco/Hvigor 编译、模拟器/真机点击场景切换后的 UI"
+    "assembleHap 已使用本机 DevEco Node/Hvigor 成功完成，并生成 entry-default-unsigned.hap",
+    "未验证：模拟器/真机点击场景切换后的 UI"
   ],
   "followUps": [
     "在 DevEco Studio 编译并运行，验证点击‘程序员’→‘继续切换’后默认规则立即显示项目源码、技术文档、构建产物"
   ],
   "changedFiles": [
-    "entry/src/main/ets/pages/Index.ets"
+    "entry/src/main/ets/pages/Index.ets",
+    "build-profile.json5"
   ],
   "reviewedBy": "Technical Director",
   "generatedBy": "project-execution-technical-management",
