@@ -56,6 +56,7 @@ interface ContentExtraction {
 struct Index {
   private preferenceStore: preferences.Preferences | undefined = undefined;
   @StorageLink('pendingSharedUris') @Watch('onPendingSharedUrisChanged') pendingSharedUris: string = '';
+  @StorageLink('pendingCardRoute') @Watch('onPendingCardRouteChanged') pendingCardRoute: string = '';
   @State query: string = '';
   @State selectedFilter: string = '全部';
   @State selectedTab: string = '收纳箱';
@@ -80,6 +81,8 @@ struct Index {
   @State autoOrganize: boolean = true;
   @State showAllHomeCategories: boolean = false;
   @State scanStatus: string = '等待导入';
+  @State scanStatusType: string = 'idle';
+  private scanStatusTimer: number = -1;
   @State profileType: string = '通用';
   @State showRuleEditor: boolean = false;
   @State showRuleDeleteConfirm: boolean = false;
@@ -101,8 +104,6 @@ struct Index {
   @State isIndexing: boolean = false;
   @State pressedFileId: number = 0;
   @State sortingRuleId: number = 0;
-  @State fileSheetOffset: number = 24;
-  @State fileSheetOpacity: number = 0;
   @State files: FileItem[] = [];
   @State categories: CategoryItem[] = [
     { name: '工作', color: '#E9F0FF', icon: '▤', subtitle: '会议、规范与交付物' },
@@ -182,11 +183,40 @@ struct Index {
       this.consumeSharedFiles();
     } catch (error) {
       this.scanStatus = '等待导入';
+      this.scanStatusType = 'idle';
     }
   }
 
   private onPendingSharedUrisChanged(): void {
     this.consumeSharedFiles();
+  }
+
+  private flashScanStatus(type: string, message: string): void {
+    if (this.scanStatusTimer !== -1) {
+      clearTimeout(this.scanStatusTimer);
+      this.scanStatusTimer = -1;
+    }
+    this.scanStatus = message;
+    this.scanStatusType = type;
+    if (type === 'success' || type === 'error') {
+      this.scanStatusTimer = setTimeout(() => {
+        this.scanStatusType = 'idle';
+        this.scanStatusTimer = -1;
+      }, type === 'error' ? 3000 : 2600);
+    }
+  }
+
+  private onPendingCardRouteChanged(): void {
+    if (this.pendingCardRoute.length === 0) {
+      return;
+    }
+    const route: string = this.pendingCardRoute;
+    this.pendingCardRoute = '';
+    if (route === 'quick-categories') {
+      this.switchTab('分类');
+    } else if (route === 'recent-files') {
+      this.switchTab('收纳箱');
+    }
   }
 
   private consumeSharedFiles(): void {
@@ -209,7 +239,7 @@ struct Index {
       }
     } catch (error) {
       this.pendingSharedUris = '';
-      this.scanStatus = '没有读取到分享的文件';
+      this.flashScanStatus('error', '没有读取到分享的文件');
     }
   }
 
@@ -246,7 +276,7 @@ struct Index {
       this.preferenceStore.putSync('autoOrganize', this.autoOrganize);
       this.preferenceStore.flush().catch(() => {});
     } catch (error) {
-      this.scanStatus = '本地保存失败';
+      this.flashScanStatus('error', '本地保存失败');
     }
   }
 
@@ -738,9 +768,9 @@ struct Index {
         .width(34)
         .height(84)
         .fontSize(20)
-        .fontColor(this.sortingRuleId === rule.id ? '#4D826C' : (total <= 1 ? '#C8D0DA' : '#9AA8B8'))
+        .fontColor(this.sortingRuleId === rule.id ? $r('app.color.accent_green') : (total <= 1 ? '#C8D0DA' : '#9AA8B8'))
         .textAlign(TextAlign.Center)
-        .backgroundColor(this.sortingRuleId === rule.id ? '#E5F4EC' : '#F0F4F8')
+        .backgroundColor(this.sortingRuleId === rule.id ? '#E5F4EC' : $r('app.color.tint_gray'))
         .borderRadius(12)
         .gesture(
           LongPressGesture({ duration: 450, repeat: false })
@@ -754,12 +784,12 @@ struct Index {
             Text(rule.name)
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
-              .fontColor('#253243')
+              .fontColor($r('app.color.text_primary'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
             Text(rule.isDefault ? '默认' : '自定义')
               .fontSize(10)
-              .fontColor(rule.isDefault ? '#607B9F' : '#4D826C')
+              .fontColor(rule.isDefault ? $r('app.color.accent_blue') : $r('app.color.accent_green'))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .backgroundColor(rule.isDefault ? '#E9F0FF' : '#E5F4EC')
               .borderRadius(6)
@@ -769,7 +799,7 @@ struct Index {
         .width('100%')
         Text(this.ruleDescription(rule))
           .fontSize(11)
-          .fontColor('#8A96A4')
+          .fontColor($r('app.color.text_caption'))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 7 })
@@ -778,13 +808,13 @@ struct Index {
           Toggle({ type: ToggleType.Switch, isOn: rule.enabled })
             .width(54)
             .height(30)
-            .selectedColor('#4D826C')
+            .selectedColor($r('app.color.accent_green'))
             .onChange((isOn: boolean) => {
               this.setRuleEnabled(rule.id, isOn);
             })
           Text(rule.enabled ? '已启用' : '停用中')
             .fontSize(12)
-            .fontColor(rule.enabled ? '#4D826C' : '#9AA5B2')
+            .fontColor(rule.enabled ? $r('app.color.accent_green') : $r('app.color.text_disabled'))
             .fontWeight(FontWeight.Medium)
             .width(48)
           if (this.sortingRuleId === rule.id) {
@@ -792,7 +822,7 @@ struct Index {
               .width(56)
               .height(34)
               .fontSize(12)
-              .fontColor('#4D826C')
+              .fontColor($r('app.color.accent_green'))
               .backgroundColor('#E5F4EC')
               .borderRadius(10)
               .onClick(() => { this.sortingRuleId = 0; })
@@ -801,7 +831,7 @@ struct Index {
               .width(76)
               .height(34)
               .fontSize(12)
-              .fontColor('#526B93')
+              .fontColor($r('app.color.accent_blue'))
               .backgroundColor('#E9F0FF')
               .borderRadius(10)
               .onClick(() => { this.placeSortingRuleBefore(rule.id); })
@@ -810,7 +840,7 @@ struct Index {
               .width(56)
               .height(34)
               .fontSize(12)
-              .fontColor('#607B9F')
+              .fontColor($r('app.color.accent_blue'))
               .backgroundColor('#E9F0FF')
               .borderRadius(10)
               .onClick(() => { this.editRule(rule); })
@@ -827,8 +857,9 @@ struct Index {
     .alignItems(VerticalAlign.Center)
     .width('100%')
     .padding({ left: 16, right: 16, top: 15, bottom: 15 })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor($r('app.color.card_bg'))
     .borderRadius(18)
+    .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
   }
 
   @Builder
@@ -836,13 +867,13 @@ struct Index {
     Text(title)
       .fontSize(13)
       .fontWeight(FontWeight.Medium)
-      .fontColor('#7B8795')
+      .fontColor($r('app.color.text_caption'))
       .alignSelf(ItemAlign.Start)
       .margin({ left: 22, top: 6, bottom: 8 })
     if (rules.length === 0) {
       Text('暂无规则')
         .fontSize(12)
-        .fontColor('#A0AAB6')
+        .fontColor($r('app.color.text_disabled'))
         .alignSelf(ItemAlign.Start)
         .margin({ left: 22, bottom: 10 })
     } else {
@@ -968,7 +999,7 @@ struct Index {
 
   private applySmartRules(): void {
     if (!this.autoOrganize) {
-      this.scanStatus = '自动整理已暂停';
+      this.flashScanStatus('success', '自动整理已暂停');
       this.persistState();
       return;
     }
@@ -986,7 +1017,11 @@ struct Index {
     });
     this.lastOrganizedCount = organized;
     this.lastOrganizeChangedCount = changed;
-    this.scanStatus = this.files.length === 0 ? '等待导入' : `已整理 ${organized} 个`;
+    if (this.files.length === 0) {
+      this.flashScanStatus('idle', '等待导入');
+    } else {
+      this.flashScanStatus('success', `已整理 ${organized} 个`);
+    }
     this.persistState();
   }
 
@@ -1058,7 +1093,11 @@ struct Index {
     this.showManualConfirm = false;
     this.pendingManualConfirmIds = [];
     this.lastOrganizedCount = this.files.filter((file: FileItem) => file.tag !== '待整理').length;
-    this.scanStatus = this.files.length === 0 ? '等待导入' : `已整理 ${this.lastOrganizedCount} 个`;
+    if (this.files.length === 0) {
+      this.flashScanStatus('idle', '等待导入');
+    } else {
+      this.flashScanStatus('success', `已整理 ${this.lastOrganizedCount} 个`);
+    }
     this.persistState();
     this.showOrganizeSummary = true;
   }
@@ -1084,16 +1123,7 @@ struct Index {
       action: 'ohos.want.action.viewData',
       uri: file.uri
     }).catch(() => {
-      this.scanStatus = `无法打开「${file.name}」`;
-    });
-  }
-
-  private animateFileSheetIn(): void {
-    this.fileSheetOffset = 24;
-    this.fileSheetOpacity = 0;
-    animateToImmediately({ curve: curves.springMotion(0.32, 1.0, 0.02) }, () => {
-      this.fileSheetOffset = 0;
-      this.fileSheetOpacity = 1;
+      this.flashScanStatus('error', `无法打开「${file.name}」`);
     });
   }
 
@@ -1102,7 +1132,6 @@ struct Index {
     this.selectedFileName = file.name;
     this.showFileDetail = false;
     this.showFileAction = true;
-    this.animateFileSheetIn();
   }
 
   private presentTagEditor(fileId: number): void {
@@ -1114,7 +1143,6 @@ struct Index {
     this.selectedFileName = currentFile.name;
     this.showFileAction = false;
     this.showFileDetail = true;
-    this.animateFileSheetIn();
   }
 
   private handleFileTap(file: FileItem): void {
@@ -1455,7 +1483,7 @@ struct Index {
     for (let index: number = 0; index < this.selectedUris.length; index++) {
       const uri: string = this.selectedUris[index];
       if (!this.files.some((file: FileItem) => file.uri === uri)) {
-        this.scanStatus = `正在导入 ${index + 1}/${this.selectedUris.length}`;
+        this.flashScanStatus('progress', `正在导入 ${index + 1}/${this.selectedUris.length}`);
         const name: string = this.fileNameFromUri(uri);
         const extension: string = this.extensionFromName(name);
         const pending: CategoryItem = this.categoryByName('待整理');
@@ -1546,7 +1574,7 @@ struct Index {
     Row() {
       Text(icon)
         .fontSize(22)
-        .fontColor('#526B93')
+        .fontColor($r('app.color.accent_blue'))
         .width(46)
         .height(46)
         .textAlign(TextAlign.Center)
@@ -1556,10 +1584,10 @@ struct Index {
         Text(label)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#253243')
+          .fontColor($r('app.color.text_primary'))
         Text(subtitle)
           .fontSize(12)
-          .fontColor('#8A96A4')
+          .fontColor($r('app.color.text_caption'))
           .margin({ top: 4 })
       }
       .alignItems(HorizontalAlign.Start)
@@ -1567,16 +1595,17 @@ struct Index {
       .margin({ left: 12 })
       Text(`${this.categoryCount(label)} 项`)
         .fontSize(13)
-        .fontColor('#8290A1')
+        .fontColor($r('app.color.text_caption'))
       Text('›')
         .fontSize(22)
-        .fontColor('#A3AFBC')
+        .fontColor($r('app.color.text_disabled'))
         .margin({ left: 5 })
     }
     .width('100%')
     .padding({ left: 14, right: 14, top: 13, bottom: 13 })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor($r('app.color.card_bg'))
     .borderRadius(19)
+    .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
     .gesture(
       GestureGroup(GestureMode.Exclusive,
         LongPressGesture({ duration: 450, repeat: false })
@@ -1596,11 +1625,11 @@ struct Index {
   private filterChip(label: string) {
     Text(label)
       .fontSize(14)
-      .fontColor(this.selectedFilter === label ? Color.White : '#526174')
+      .fontColor(this.selectedFilter === label ? Color.White : $r('app.color.text_body'))
       .fontWeight(this.selectedFilter === label ? FontWeight.Medium : FontWeight.Regular)
       .textAlign(TextAlign.Center)
       .padding({ left: 16, right: 16, top: 9, bottom: 9 })
-      .backgroundColor(this.selectedFilter === label ? '#1D2633' : '#EDF1F5')
+      .backgroundColor(this.selectedFilter === label ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
       .borderRadius(18)
       .onClick(() => {
         this.selectedFilter = label;
@@ -1612,7 +1641,7 @@ struct Index {
     Text(`${category.name} ${this.categoryCount(category.name)}`)
       .fontSize(15)
       .fontWeight(FontWeight.Bold)
-      .fontColor(category.name === '待整理' ? '#9A6B17' : '#265F93')
+      .fontColor(category.name === '待整理' ? $r('app.color.accent_amber') : $r('app.color.accent_blue'))
       .padding({ left: 15, right: 15, top: 9, bottom: 9 })
       .backgroundColor(category.color)
       .borderRadius(19)
@@ -1627,9 +1656,9 @@ struct Index {
     Text(`全部文件 ${this.files.length}`)
       .fontSize(15)
       .fontWeight(FontWeight.Bold)
-      .fontColor(this.selectedFilter === '全部' ? '#FFFFFF' : '#1D2633')
+      .fontColor(this.selectedFilter === '全部' ? $r('app.color.card_bg') : $r('app.color.accent_primary'))
       .padding({ left: 15, right: 15, top: 9, bottom: 9 })
-      .backgroundColor(this.selectedFilter === '全部' ? '#1D2633' : '#EDF1F5')
+      .backgroundColor(this.selectedFilter === '全部' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
       .borderRadius(19)
       .margin({ right: 10, bottom: 10 })
       .onClick(() => {
@@ -1645,11 +1674,11 @@ struct Index {
             Text('拾序')
               .fontSize(40)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#16202C')
+              .fontColor($r('app.color.text_primary'))
               .alignSelf(ItemAlign.Start)
             Text('让每个文件，都有自己的位置')
               .fontSize(17)
-              .fontColor('#6D7B8C')
+              .fontColor($r('app.color.text_caption'))
               .alignSelf(ItemAlign.Start)
               .margin({ top: 7 })
           }
@@ -1661,13 +1690,13 @@ struct Index {
               Text('自动整理')
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#182232')
+                .fontColor($r('app.color.text_primary'))
               Blank()
               Button('立即整理')
                 .height(40)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#4D826C')
+                .fontColor($r('app.color.accent_green'))
                 .padding({ left: 18, right: 18 })
                 .backgroundColor('#E5F4EC')
                 .borderRadius(20)
@@ -1688,9 +1717,9 @@ struct Index {
                 Text(this.showAllHomeCategories ? '收起' : `更多 ${this.categories.length - 4}`)
                   .fontSize(15)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#526174')
+                  .fontColor($r('app.color.text_body'))
                   .padding({ left: 15, right: 15, top: 9, bottom: 9 })
-                  .backgroundColor('#EDF1F5')
+                  .backgroundColor($r('app.color.tint_gray'))
                   .borderRadius(19)
                   .margin({ right: 10, bottom: 10 })
                   .onClick(() => {
@@ -1703,23 +1732,57 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 24, right: 24, top: 28, bottom: 25 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(34)
           .margin({ left: 26, right: 26, bottom: 26 })
-          .shadow({ radius: 28, color: '#22000000', offsetX: 0, offsetY: 12 })
+          .shadow({ radius: 28, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 12 })
 
           Row() {
             Text(this.selectedFilter === '全部' ? '最近文件' : `${this.selectedFilter} · 筛选结果`)
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
             Blank()
             Text(`${this.visibleFiles().length} 项`)
               .fontSize(13)
-              .fontColor('#8B97A6')
+              .fontColor($r('app.color.text_caption'))
           }
           .width('100%')
           .padding({ left: 22, right: 22, bottom: 12 })
+
+          Row({ space: 8 }) {
+            Text('🔍')
+              .fontSize(14)
+              .fontColor($r('app.color.text_disabled'))
+            TextInput({ text: this.query, placeholder: '搜索文件名或标签' })
+              .layoutWeight(1)
+              .height(36)
+              .fontSize(14)
+              .fontColor($r('app.color.text_primary'))
+              .placeholderColor($r('app.color.text_disabled'))
+              .placeholderFont({ size: 14 })
+              .backgroundColor(Color.Transparent)
+              .onChange((value: string) => {
+                this.query = value;
+              })
+            if (this.query.length > 0) {
+              Text('×')
+                .fontSize(16)
+                .fontColor($r('app.color.text_disabled'))
+                .width(20)
+                .height(20)
+                .textAlign(TextAlign.Center)
+                .onClick(() => {
+                  this.query = '';
+                })
+            }
+          }
+          .width('100%')
+          .height(44)
+          .padding({ left: 14, right: 12 })
+          .backgroundColor($r('app.color.tint_gray'))
+          .borderRadius(16)
+          .margin({ left: 22, right: 22, bottom: 14 })
 
           Column({ space: 10 }) {
             ForEach(this.visibleFiles(), (file: FileItem) => {
@@ -1727,7 +1790,7 @@ struct Index {
                 Row() {
                   Text(file.icon)
                     .fontSize(22)
-                    .fontColor('#506B9A')
+                    .fontColor($r('app.color.accent_blue'))
                 }
                 .width(48)
                 .height(48)
@@ -1738,18 +1801,18 @@ struct Index {
                   Text(file.name)
                     .fontSize(15)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor('#253243')
+                    .fontColor($r('app.color.text_primary'))
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   Row({ space: 7 }) {
                     Text(file.kind + ' · ' + file.size)
                       .fontSize(12)
-                      .fontColor('#8A96A4')
+                      .fontColor($r('app.color.text_caption'))
                     Text(file.tag)
                       .fontSize(11)
-                      .fontColor('#607B9F')
+                      .fontColor($r('app.color.accent_blue'))
                       .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-                      .backgroundColor('#F0F4F8')
+                      .backgroundColor($r('app.color.tint_gray'))
                       .borderRadius(7)
                   }
                   .margin({ top: 5 })
@@ -1760,7 +1823,7 @@ struct Index {
                 Column() {
                   Text(file.updated)
                     .fontSize(10)
-                    .fontColor('#A0AAB6')
+                    .fontColor($r('app.color.text_disabled'))
                 }
                 .width(54)
                 .alignItems(HorizontalAlign.End)
@@ -1768,8 +1831,9 @@ struct Index {
               }
               .width('100%')
               .padding({ left: 14, right: 14, top: 12, bottom: 12 })
-              .backgroundColor('#FFFFFF')
+              .backgroundColor($r('app.color.card_bg'))
               .borderRadius(18)
+              .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
               .scale({
                 x: this.pressedFileId === file.id ? 0.985 : 1,
                 y: this.pressedFileId === file.id ? 0.985 : 1
@@ -1805,10 +1869,10 @@ struct Index {
             Column() {
               Text(this.files.length === 0 ? '还没有导入真实文件' : '没有找到匹配文件')
                 .fontSize(16)
-                .fontColor('#647184')
+                .fontColor($r('app.color.text_body'))
               Text(this.files.length === 0 ? '点击底部“添加”，从系统文件中选择' : '试试其他关键词或分类')
                 .fontSize(13)
-                .fontColor('#A0AAB6')
+                .fontColor($r('app.color.text_disabled'))
                 .margin({ top: 7 })
             }
             .width('100%')
@@ -1819,7 +1883,7 @@ struct Index {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F5F7FA')
+      .backgroundColor($r('app.color.page_bg'))
       .scrollBar(BarState.Off)
       .opacity(this.pageOpacity)
       .translate({ x: 0, y: this.pageOffset })
@@ -1832,24 +1896,24 @@ struct Index {
                 Text('分类')
                   .fontSize(30)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#16202C')
+                  .fontColor($r('app.color.text_primary'))
                 Text('按标签找到你要的文件')
                   .fontSize(14)
-                  .fontColor('#7B8795')
+                  .fontColor($r('app.color.text_caption'))
                   .margin({ top: 5 })
               }
               .alignItems(HorizontalAlign.Start)
               Blank()
               Text(`${this.files.length} 项`)
                 .fontSize(13)
-                .fontColor('#7B8795')
+                .fontColor($r('app.color.text_caption'))
             }
             .width('100%')
             .padding({ left: 22, right: 22, top: 23, bottom: 22 })
             Text('我的标签')
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
               .alignSelf(ItemAlign.Start)
               .margin({ left: 22, bottom: 12 })
             Column({ space: 10 }) {
@@ -1862,11 +1926,11 @@ struct Index {
             Row() {
               Text('自定义分类')
                 .fontSize(15)
-                .fontColor('#526B93')
+                .fontColor($r('app.color.accent_blue'))
               Blank()
               Text('+')
                 .fontSize(23)
-                .fontColor('#526B93')
+                .fontColor($r('app.color.accent_blue'))
                 .width(32)
                 .height(32)
                 .textAlign(TextAlign.Center)
@@ -1875,9 +1939,10 @@ struct Index {
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
           .margin({ left: 20, right: 20, top: 14 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
             .onClick(() => {
               this.newCategoryName = '';
               this.newCategoryTitleKeywords = '';
@@ -1887,7 +1952,7 @@ struct Index {
             })
             Text('点击标签即可回到收纳箱查看结果')
               .fontSize(12)
-              .fontColor('#9AA5B2')
+              .fontColor($r('app.color.text_disabled'))
               .margin({ top: 18 })
           }
           .width('100%')
@@ -1895,7 +1960,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor('#F5F7FA')
+        .backgroundColor($r('app.color.page_bg'))
         .scrollBar(BarState.Off)
         .opacity(this.pageOpacity)
         .translate({ x: 0, y: this.pageOffset })
@@ -1908,10 +1973,10 @@ struct Index {
               Text('设置')
                 .fontSize(30)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#16202C')
+                .fontColor($r('app.color.text_primary'))
               Text('让收纳方式更贴合你的习惯')
                 .fontSize(14)
-                .fontColor('#7B8795')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 5 })
             }
             .alignItems(HorizontalAlign.Start)
@@ -1920,17 +1985,17 @@ struct Index {
           .padding({ left: 22, right: 22, top: 23, bottom: 23 })
           Text('整理偏好')
             .fontSize(13)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, bottom: 9 })
           Row() {
             Column() {
               Text('立即整理')
                 .fontSize(16)
-                .fontColor('#253243')
+                .fontColor($r('app.color.text_primary'))
               Text('按当前规则整理待整理文件')
                 .fontSize(12)
-                .fontColor('#8A96A4')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
@@ -1938,7 +2003,7 @@ struct Index {
             Button('运行')
               .fontSize(12)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#4D826C')
+              .fontColor($r('app.color.accent_green'))
               .backgroundColor('#E5F4EC')
               .borderRadius(12)
               .onClick(() => {
@@ -1947,56 +2012,59 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 15, bottom: 15 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
           Text('文件范围')
             .fontSize(13)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: 23, bottom: 9 })
           Row() {
             Column() {
               Text('已选择的文件')
                 .fontSize(16)
-                .fontColor('#253243')
+                .fontColor($r('app.color.text_primary'))
               Text('只整理你授权过的文件，更安全')
                 .fontSize(12)
-                .fontColor('#8A96A4')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
             Text('›')
               .fontSize(22)
-              .fontColor('#A3AFBC')
+              .fontColor($r('app.color.text_disabled'))
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 15, bottom: 15 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
           Text('关于收纳箱')
             .fontSize(13)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: 23, bottom: 9 })
           Row() {
             Text('版本 1.0.0 · ArkUI-X')
               .fontSize(15)
-              .fontColor('#526174')
+              .fontColor($r('app.color.text_body'))
             Blank()
             Text('›')
               .fontSize(22)
-              .fontColor('#A3AFBC')
+              .fontColor($r('app.color.text_disabled'))
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 16, bottom: 16 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(18)
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
         }
         .width('100%')
         .height('100%')
         .padding({ bottom: 76 })
-        .backgroundColor('#F5F7FA')
+        .backgroundColor($r('app.color.page_bg'))
         .opacity(this.pageOpacity)
         .translate({ x: 0, y: this.pageOffset })
       }
@@ -2009,17 +2077,17 @@ struct Index {
               Text('智能')
                 .fontSize(30)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#16202C')
+                .fontColor($r('app.color.text_primary'))
               Text('把重复整理交给规则')
                 .fontSize(14)
-                .fontColor('#7B8795')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 5 })
             }
             .alignItems(HorizontalAlign.Start)
             Blank()
             Text('✧')
               .fontSize(24)
-              .fontColor('#607B9F')
+              .fontColor($r('app.color.accent_blue'))
               .width(42)
               .height(42)
               .textAlign(TextAlign.Center)
@@ -2033,10 +2101,10 @@ struct Index {
               Text('运行智能整理')
                 .fontSize(18)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#1A2532')
+                .fontColor($r('app.color.text_primary'))
               Text(this.files.length === 0 ? '导入文件后可按规则自动归类' : `按当前规则整理 ${this.files.length} 个文件`)
                 .fontSize(13)
-                .fontColor('#6D7B8C')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 7 })
             }
             .alignItems(HorizontalAlign.Start)
@@ -2044,7 +2112,7 @@ struct Index {
             Button('立即整理')
               .fontSize(12)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#4D826C')
+              .fontColor($r('app.color.accent_green'))
               .backgroundColor('#E5F4EC')
               .borderRadius(12)
               .onClick(() => {
@@ -2053,42 +2121,43 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
-          .backgroundColor('#EAF2FF')
+          .backgroundColor($r('app.color.tint_blue_strong'))
           .borderRadius(22)
           .margin({ left: 20, right: 20, bottom: 22 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
           Text('你的使用方式')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#1A2532')
+            .fontColor($r('app.color.text_primary'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, bottom: 11 })
           Row({ space: 8 }) {
             Button('学生')
               .fontSize(13)
-              .fontColor(this.profileType === '学生' ? Color.White : '#526174')
+              .fontColor(this.profileType === '学生' ? Color.White : $r('app.color.text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '学生' ? '#1D2633' : '#EDF1F5')
+              .backgroundColor(this.profileType === '学生' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('学生'); })
             Button('摄影师')
               .fontSize(13)
-              .fontColor(this.profileType === '摄影师' ? Color.White : '#526174')
+              .fontColor(this.profileType === '摄影师' ? Color.White : $r('app.color.text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '摄影师' ? '#1D2633' : '#EDF1F5')
+              .backgroundColor(this.profileType === '摄影师' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('摄影师'); })
             Button('程序员')
               .fontSize(13)
-              .fontColor(this.profileType === '程序员' ? Color.White : '#526174')
+              .fontColor(this.profileType === '程序员' ? Color.White : $r('app.color.text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '程序员' ? '#1D2633' : '#EDF1F5')
+              .backgroundColor(this.profileType === '程序员' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('程序员'); })
             Button('通用')
               .fontSize(13)
-              .fontColor(this.profileType === '通用' ? Color.White : '#526174')
+              .fontColor(this.profileType === '通用' ? Color.White : $r('app.color.text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '通用' ? '#1D2633' : '#EDF1F5')
+              .backgroundColor(this.profileType === '通用' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('通用'); })
           }
@@ -2096,23 +2165,23 @@ struct Index {
           .padding({ left: 20, right: 20 })
           Text(this.profileType === '未设置' ? '选择后会生成更适合你的默认规则' : `已按${this.profileType}场景生成建议`)
             .fontSize(12)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: 9, bottom: 22 })
           Text(this.profileType === '学生' ? '建议依据：学科名称、作业/笔记关键词、课程文件夹' : this.profileType === '摄影师' ? '建议依据：拍摄日期、项目名、RAW/JPEG/视频类型' : this.profileType === '程序员' ? '建议依据：项目目录、语言扩展名、README 与构建产物' : '建议依据：文件名、类型、大小和最近使用时间')
             .fontSize(12)
-            .fontColor('#607B9F')
+            .fontColor($r('app.color.accent_blue'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: -13, bottom: 20 })
           Row() {
             Text('整理规则')
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
             Blank()
             Button('+ 新建规则')
               .fontSize(12)
-              .fontColor('#526B93')
+              .fontColor($r('app.color.accent_blue'))
               .backgroundColor('#E9F0FF')
               .borderRadius(13)
               .onClick(() => { this.startNewRule(); })
@@ -2128,23 +2197,23 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor('#F5F7FA')
+        .backgroundColor($r('app.color.page_bg'))
         .opacity(this.pageOpacity)
         .translate({ x: 0, y: this.pageOffset })
       }
 
       Row() {
         Column() {
-          Text('▦').fontSize(23).fontColor(this.selectedTab === '收纳箱' ? '#1B2735' : '#9AA5B2').height(29).textAlign(TextAlign.Center)
-          Text('收纳箱').fontSize(11).fontColor(this.selectedTab === '收纳箱' ? '#1B2735' : '#9AA5B2').margin({ top: 0 })
+          Text('▦').fontSize(23).fontColor(this.selectedTab === '收纳箱' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).height(29).textAlign(TextAlign.Center)
+          Text('收纳箱').fontSize(11).fontColor(this.selectedTab === '收纳箱' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).margin({ top: 0 })
         }
         .layoutWeight(1)
         .height(60)
         .justifyContent(FlexAlign.Center)
         .onClick(() => { this.switchTab('收纳箱'); })
         Column() {
-          Text('◇').fontSize(23).fontColor(this.selectedTab === '分类' ? '#1B2735' : '#9AA5B2').height(29).textAlign(TextAlign.Center)
-          Text('分类').fontSize(11).fontColor(this.selectedTab === '分类' ? '#1B2735' : '#9AA5B2').margin({ top: 0 })
+          Text('◇').fontSize(23).fontColor(this.selectedTab === '分类' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).height(29).textAlign(TextAlign.Center)
+          Text('分类').fontSize(11).fontColor(this.selectedTab === '分类' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).margin({ top: 0 })
         }
         .layoutWeight(1)
         .height(60)
@@ -2158,11 +2227,11 @@ struct Index {
             .width(44)
             .height(44)
             .borderRadius(22)
-            .backgroundColor('#1D2633')
+            .backgroundColor($r('app.color.accent_primary'))
             .onClick(() => { this.showQuickAdd = true; })
           Text('添加')
             .fontSize(11)
-            .fontColor('#7B8795')
+            .fontColor($r('app.color.text_caption'))
             .margin({ top: 2 })
         }
         .layoutWeight(1)
@@ -2171,12 +2240,12 @@ struct Index {
         Column() {
           Text('✧')
             .fontSize(23)
-            .fontColor(this.selectedTab === '智能' ? '#1B2735' : '#9AA5B2')
+            .fontColor(this.selectedTab === '智能' ? $r('app.color.text_primary') : $r('app.color.text_disabled'))
             .height(29)
             .textAlign(TextAlign.Center)
           Text('智能')
             .fontSize(11)
-            .fontColor(this.selectedTab === '智能' ? '#1B2735' : '#9AA5B2')
+            .fontColor(this.selectedTab === '智能' ? $r('app.color.text_primary') : $r('app.color.text_disabled'))
             .margin({ top: 0 })
         }
         .layoutWeight(1)
@@ -2184,8 +2253,8 @@ struct Index {
         .justifyContent(FlexAlign.Center)
         .onClick(() => { this.switchTab('智能'); })
         Column() {
-          Text('⚙').fontSize(21).fontColor(this.selectedTab === '设置' ? '#1B2735' : '#9AA5B2').height(29).textAlign(TextAlign.Center)
-          Text('设置').fontSize(11).fontColor(this.selectedTab === '设置' ? '#1B2735' : '#9AA5B2').margin({ top: 0 })
+          Text('⚙').fontSize(21).fontColor(this.selectedTab === '设置' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).height(29).textAlign(TextAlign.Center)
+          Text('设置').fontSize(11).fontColor(this.selectedTab === '设置' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).margin({ top: 0 })
         }
         .layoutWeight(1)
         .height(60)
@@ -2195,7 +2264,7 @@ struct Index {
       .height(72)
       .width('100%')
       .padding({ left: 16, right: 16, bottom: 7 })
-      .backgroundColor('#EAF0F6F2')
+      .backgroundColor($r('app.color.blur_bg_bar'))
       .backgroundBlurStyle(BlurStyle.Thin)
       .borderRadius({ topLeft: 26, topRight: 26 })
 
@@ -2205,11 +2274,11 @@ struct Index {
             Text('切换使用方式？')
               .fontSize(21)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
               .alignSelf(ItemAlign.Start)
             Text(`切换到「${this.pendingProfileType}」会替换默认分类和默认整理规则，部分已归类文件可能会按新规则重新整理，原有归类可能被打散。自定义分类和用户规则会保留。`)
               .fontSize(13)
-              .fontColor('#6D7B8C')
+              .fontColor($r('app.color.text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 18 })
             Row({ space: 10 }) {
@@ -2217,8 +2286,8 @@ struct Index {
                 .height(44)
                 .layoutWeight(1)
                 .fontSize(15)
-                .fontColor('#526174')
-                .backgroundColor('#EEF1F5')
+                .fontColor($r('app.color.text_body'))
+                .backgroundColor($r('app.color.tint_gray'))
                 .borderRadius(14)
                 .onClick(() => { this.cancelProfileChange(); })
               Button('继续切换')
@@ -2226,7 +2295,7 @@ struct Index {
                 .layoutWeight(1)
                 .fontSize(15)
                 .fontColor(Color.White)
-                .backgroundColor('#1D2633')
+                .backgroundColor($r('app.color.accent_primary'))
                 .borderRadius(14)
                 .onClick(() => { this.confirmProfileChange(); })
             }
@@ -2234,14 +2303,17 @@ struct Index {
           }
           .width('86%')
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor('#66000000')
+        .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showRuleDeleteConfirm) {
@@ -2250,11 +2322,11 @@ struct Index {
             Text('删除整理规则？')
               .fontSize(21)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
               .alignSelf(ItemAlign.Start)
             Text(`将删除「${this.ruleName}」这条规则。删除后不会删除分类和文件，但之后自动整理不会再使用这条规则。`)
               .fontSize(13)
-              .fontColor('#6D7B8C')
+              .fontColor($r('app.color.text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 18 })
             Row({ space: 10 }) {
@@ -2262,8 +2334,8 @@ struct Index {
                 .height(44)
                 .layoutWeight(1)
                 .fontSize(15)
-                .fontColor('#526174')
-                .backgroundColor('#EEF1F5')
+                .fontColor($r('app.color.text_body'))
+                .backgroundColor($r('app.color.tint_gray'))
                 .borderRadius(14)
                 .onClick(() => { this.cancelDeleteRule(); })
               Button('确认删除')
@@ -2271,7 +2343,7 @@ struct Index {
                 .layoutWeight(1)
                 .fontSize(15)
                 .fontColor(Color.White)
-                .backgroundColor('#B24A4A')
+                .backgroundColor($r('app.color.accent_red'))
                 .borderRadius(14)
                 .onClick(() => { this.confirmDeleteRule(); })
             }
@@ -2279,14 +2351,17 @@ struct Index {
           }
           .width('86%')
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor('#66000000')
+        .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showCategoryDeleteConfirm) {
@@ -2295,11 +2370,11 @@ struct Index {
             Text('删除标签？')
               .fontSize(21)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
               .alignSelf(ItemAlign.Start)
             Text(`将删除「${this.deletingCategoryName}」标签。该标签下的 ${this.categoryCount(this.deletingCategoryName)} 个文件会移入「待整理」，目标为该标签的整理规则也会一并移除。`)
               .fontSize(13)
-              .fontColor('#6D7B8C')
+              .fontColor($r('app.color.text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 18 })
             Row({ space: 10 }) {
@@ -2307,8 +2382,8 @@ struct Index {
                 .height(44)
                 .layoutWeight(1)
                 .fontSize(15)
-                .fontColor('#526174')
-                .backgroundColor('#EEF1F5')
+                .fontColor($r('app.color.text_body'))
+                .backgroundColor($r('app.color.tint_gray'))
                 .borderRadius(14)
                 .onClick(() => { this.cancelDeleteCategory(); })
               Button('确认删除')
@@ -2316,7 +2391,7 @@ struct Index {
                 .layoutWeight(1)
                 .fontSize(15)
                 .fontColor(Color.White)
-                .backgroundColor('#B24A4A')
+                .backgroundColor($r('app.color.accent_red'))
                 .borderRadius(14)
                 .onClick(() => { this.confirmDeleteCategory(); })
             }
@@ -2324,14 +2399,17 @@ struct Index {
           }
           .width('86%')
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor('#66000000')
+        .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showManualConfirm) {
@@ -2342,17 +2420,17 @@ struct Index {
                 Text('人工确认')
                   .fontSize(21)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#1A2532')
+                  .fontColor($r('app.color.text_primary'))
                 Text(`还有 ${this.pendingManualConfirmIds.length} 个文件规则无法判断`)
                   .fontSize(12)
-                  .fontColor('#7B8795')
+                  .fontColor($r('app.color.text_caption'))
                   .margin({ top: 5 })
               }
               .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
               Text('×')
                 .fontSize(24)
-                .fontColor('#7D8998')
+                .fontColor($r('app.color.text_caption'))
                 .width(34)
                 .height(34)
                 .textAlign(TextAlign.Center)
@@ -2361,7 +2439,7 @@ struct Index {
             .width('100%')
             Text('请选择合适分类；不确定的文件可以继续留在「待整理」，不会被自动覆盖。')
               .fontSize(13)
-              .fontColor('#6D7B8C')
+              .fontColor($r('app.color.text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 14 })
               .alignSelf(ItemAlign.Start)
@@ -2372,7 +2450,7 @@ struct Index {
                     Row() {
                       Text(file.icon)
                         .fontSize(15)
-                        .fontColor('#9A7B55')
+                        .fontColor($r('app.color.accent_amber'))
                         .width(30)
                         .height(30)
                         .textAlign(TextAlign.Center)
@@ -2382,12 +2460,12 @@ struct Index {
                         Text(file.name)
                           .fontSize(14)
                           .fontWeight(FontWeight.Medium)
-                          .fontColor('#1A2532')
+                          .fontColor($r('app.color.text_primary'))
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                         Text(`${file.kind} · ${file.parseStatus}`)
                           .fontSize(11)
-                          .fontColor('#8A96A4')
+                          .fontColor($r('app.color.text_caption'))
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                           .margin({ top: 3 })
@@ -2403,7 +2481,7 @@ struct Index {
                           Text(category.name)
                             .fontSize(12)
                             .fontWeight(FontWeight.Medium)
-                            .fontColor('#526174')
+                            .fontColor($r('app.color.text_body'))
                             .padding({ left: 12, right: 12, top: 7, bottom: 7 })
                             .backgroundColor(category.color)
                             .borderRadius(13)
@@ -2414,7 +2492,7 @@ struct Index {
                       Text('保持待整理')
                         .fontSize(12)
                         .fontWeight(FontWeight.Medium)
-                        .fontColor('#9A7B55')
+                        .fontColor($r('app.color.accent_amber'))
                         .padding({ left: 12, right: 12, top: 7, bottom: 7 })
                         .backgroundColor('#FFF0DD')
                         .borderRadius(13)
@@ -2426,7 +2504,7 @@ struct Index {
                   }
                   .width('100%')
                   .padding({ left: 12, right: 12, top: 12, bottom: 8 })
-                  .backgroundColor('#F3F6F9')
+                  .backgroundColor($r('app.color.tint_gray'))
                   .borderRadius(14)
                 }, (file: FileItem) => `${file.id}-${file.tag}`)
               }
@@ -2438,22 +2516,25 @@ struct Index {
               .width('100%')
               .height(44)
               .fontSize(15)
-              .fontColor('#526174')
-              .backgroundColor('#EEF1F5')
+              .fontColor($r('app.color.text_body'))
+              .backgroundColor($r('app.color.tint_gray'))
               .borderRadius(15)
               .margin({ top: 16 })
               .onClick(() => { this.finishManualConfirmation(); })
           }
           .width('88%')
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor('#00000033')
+        .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showOrganizeSummary) {
@@ -2464,15 +2545,15 @@ struct Index {
                 Text('整理完成')
                   .fontSize(21)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#1A2532')
+                  .fontColor($r('app.color.text_primary'))
                 Text(`本次调整 ${this.lastOrganizeChangedCount} 个文件 · 已归类 ${this.lastOrganizedCount} 个`)
                   .fontSize(12)
-                  .fontColor('#7B8795')
+                  .fontColor($r('app.color.text_caption'))
                   .margin({ top: 5 })
                 if (this.lastManualConfirmedCount > 0) {
                   Text(`其中人工确认 ${this.lastManualConfirmedCount} 个`)
                     .fontSize(12)
-                    .fontColor('#4D826C')
+                    .fontColor($r('app.color.accent_green'))
                     .margin({ top: 4 })
                 }
               }
@@ -2480,7 +2561,7 @@ struct Index {
               .layoutWeight(1)
               Text('×')
                 .fontSize(24)
-                .fontColor('#7D8998')
+                .fontColor($r('app.color.text_caption'))
                 .width(34)
                 .height(34)
                 .textAlign(TextAlign.Center)
@@ -2490,12 +2571,12 @@ struct Index {
             Row() {
               Text('待整理')
                 .fontSize(13)
-                .fontColor('#9A7B55')
+                .fontColor($r('app.color.accent_amber'))
               Blank()
               Text(`${this.categoryCount('待整理')} 项`)
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
-                .fontColor('#9A7B55')
+                .fontColor($r('app.color.accent_amber'))
             }
             .width('100%')
             .padding({ left: 12, right: 12, top: 10, bottom: 10 })
@@ -2508,7 +2589,7 @@ struct Index {
                   Row() {
                     Text(category.icon)
                       .fontSize(15)
-                      .fontColor('#526B93')
+                      .fontColor($r('app.color.accent_blue'))
                       .width(28)
                       .height(28)
                       .textAlign(TextAlign.Center)
@@ -2516,16 +2597,16 @@ struct Index {
                       .borderRadius(9)
                     Text(category.name)
                       .fontSize(13)
-                      .fontColor('#526174')
+                      .fontColor($r('app.color.text_body'))
                       .margin({ left: 9 })
                     Blank()
                     Text(`${this.categoryCount(category.name)} 项`)
                       .fontSize(13)
-                      .fontColor('#8A96A4')
+                      .fontColor($r('app.color.text_caption'))
                   }
                   .width('100%')
                   .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-                  .backgroundColor('#F3F6F9')
+                  .backgroundColor($r('app.color.tint_gray'))
                   .borderRadius(12)
                 }
               }, (category: CategoryItem) => category.name)
@@ -2537,7 +2618,7 @@ struct Index {
               .height(44)
               .fontSize(15)
               .fontColor(Color.White)
-              .backgroundColor('#1D2633')
+              .backgroundColor($r('app.color.accent_primary'))
               .borderRadius(15)
               .onClick(() => {
                 this.showOrganizeSummary = false;
@@ -2546,13 +2627,16 @@ struct Index {
           }
           .width('88%')
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor($r('app.color.card_bg'))
           .borderRadius(22)
+          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor('#00000033')
+        .backgroundColor($r('app.color.mask'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
       if (this.showFileAction) {
@@ -2561,23 +2645,23 @@ struct Index {
             Text('还没有归纳')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
             Blank()
             Text('×')
               .fontSize(23)
-              .fontColor('#7D8998')
+              .fontColor($r('app.color.text_caption'))
               .onClick(() => { this.showFileAction = false; })
           }
           .width('100%')
           Text(this.selectedFileName)
             .fontSize(15)
-            .fontColor('#526174')
+            .fontColor($r('app.color.text_body'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 13, bottom: 18 })
           Text('你可以先归入分类，也可以直接打开文件')
             .fontSize(13)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ bottom: 15 })
           Row({ space: 10 }) {
@@ -2586,7 +2670,7 @@ struct Index {
               .height(46)
               .fontSize(15)
               .fontColor(Color.White)
-              .backgroundColor('#1D2633')
+              .backgroundColor($r('app.color.accent_primary'))
               .borderRadius(15)
               .onClick(() => {
                 this.presentTagEditor(this.selectedFileId);
@@ -2595,7 +2679,7 @@ struct Index {
               .layoutWeight(1)
               .height(46)
               .fontSize(15)
-              .fontColor('#526B93')
+              .fontColor($r('app.color.accent_blue'))
               .backgroundColor('#E9F0FF')
               .borderRadius(15)
               .onClick(() => {
@@ -2610,11 +2694,12 @@ struct Index {
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 26 })
-        .backgroundColor('#F7FAFCF2')
+        .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
-        .translate({ x: 0, y: this.fileSheetOffset })
-        .opacity(this.fileSheetOpacity)
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showCategoryEditor) {
@@ -2623,11 +2708,11 @@ struct Index {
             Text('新建分类')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
             Blank()
             Text('×')
               .fontSize(23)
-              .fontColor('#7D8998')
+              .fontColor($r('app.color.text_caption'))
               .onClick(() => { this.showCategoryEditor = false; })
           }
           .width('100%')
@@ -2638,75 +2723,75 @@ struct Index {
             .onChange((value: string) => { this.newCategoryName = value; })
           Text('选择图标')
             .fontSize(13)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
           Row({ space: 12 }) {
-            Text('▤').fontSize(20).fontColor('#526B93').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '▤' ? '#E9F0FF' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '▤'; })
-            Text('✦').fontSize(20).fontColor('#765AA7').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '✦' ? '#F3E9FF' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '✦'; })
-            Text('◇').fontSize(20).fontColor('#4D826C').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◇' ? '#E5F7EF' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '◇'; })
-            Text('◉').fontSize(20).fontColor('#A5763F').width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◉' ? '#FFF0DD' : '#F1F3F5').borderRadius(12).onClick(() => { this.newCategoryIcon = '◉'; })
+            Text('▤').fontSize(20).fontColor($r('app.color.accent_blue')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '▤' ? '#E9F0FF' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '▤'; })
+            Text('✦').fontSize(20).fontColor($r('app.color.accent_purple')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '✦' ? '#F3E9FF' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '✦'; })
+            Text('◇').fontSize(20).fontColor($r('app.color.accent_green')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◇' ? '#E5F7EF' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '◇'; })
+            Text('◉').fontSize(20).fontColor($r('app.color.accent_amber')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◉' ? '#FFF0DD' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '◉'; })
           }
           .width('100%')
           .margin({ top: 9, bottom: 14 })
           Text('选择颜色')
             .fontSize(13)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
           Row({ space: 14 }) {
             Text(this.newCategoryColor === '#E9F0FF' ? '✓' : '')
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#526B93')
+              .fontColor($r('app.color.accent_blue'))
               .width(36)
               .height(36)
               .textAlign(TextAlign.Center)
               .backgroundColor('#E9F0FF')
               .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#E9F0FF' ? 2 : 0, color: '#526B93' })
+              .border({ width: this.newCategoryColor === '#E9F0FF' ? 2 : 0, color: $r('app.color.accent_blue') })
               .onClick(() => { this.newCategoryColor = '#E9F0FF'; })
             Text(this.newCategoryColor === '#F3E9FF' ? '✓' : '')
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#765AA7')
+              .fontColor($r('app.color.accent_purple'))
               .width(36)
               .height(36)
               .textAlign(TextAlign.Center)
               .backgroundColor('#F3E9FF')
               .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#F3E9FF' ? 2 : 0, color: '#765AA7' })
+              .border({ width: this.newCategoryColor === '#F3E9FF' ? 2 : 0, color: $r('app.color.accent_purple') })
               .onClick(() => { this.newCategoryColor = '#F3E9FF'; })
             Text(this.newCategoryColor === '#E5F7EF' ? '✓' : '')
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#4D826C')
+              .fontColor($r('app.color.accent_green'))
               .width(36)
               .height(36)
               .textAlign(TextAlign.Center)
               .backgroundColor('#E5F7EF')
               .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#E5F7EF' ? 2 : 0, color: '#4D826C' })
+              .border({ width: this.newCategoryColor === '#E5F7EF' ? 2 : 0, color: $r('app.color.accent_green') })
               .onClick(() => { this.newCategoryColor = '#E5F7EF'; })
             Text(this.newCategoryColor === '#FFF0DD' ? '✓' : '')
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#A5763F')
+              .fontColor($r('app.color.accent_amber'))
               .width(36)
               .height(36)
               .textAlign(TextAlign.Center)
               .backgroundColor('#FFF0DD')
               .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#FFF0DD' ? 2 : 0, color: '#A5763F' })
+              .border({ width: this.newCategoryColor === '#FFF0DD' ? 2 : 0, color: $r('app.color.accent_amber') })
               .onClick(() => { this.newCategoryColor = '#FFF0DD'; })
             Text(this.newCategoryColor === '#E7F5F8' ? '✓' : '')
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#4D7F8B')
+              .fontColor($r('app.color.accent_cyan'))
               .width(36)
               .height(36)
               .textAlign(TextAlign.Center)
               .backgroundColor('#E7F5F8')
               .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#E7F5F8' ? 2 : 0, color: '#4D7F8B' })
+              .border({ width: this.newCategoryColor === '#E7F5F8' ? 2 : 0, color: $r('app.color.accent_cyan') })
               .onClick(() => { this.newCategoryColor = '#E7F5F8'; })
           }
           .width('100%')
@@ -2714,18 +2799,18 @@ struct Index {
           Row() {
             Text('筛选条件')
               .fontSize(13)
-              .fontColor('#526174')
+              .fontColor($r('app.color.text_body'))
             Blank()
             Text(this.showCategoryRuleOptions ? '收起' : '展开')
               .fontSize(12)
-              .fontColor('#526B93')
+              .fontColor($r('app.color.accent_blue'))
               .padding({ left: 10, right: 10, top: 6, bottom: 6 })
               .backgroundColor('#E9F0FF')
               .borderRadius(12)
           }
           .width('100%')
           .padding({ left: 12, right: 12, top: 11, bottom: 11 })
-          .backgroundColor('#F3F6F9')
+          .backgroundColor($r('app.color.tint_gray'))
           .borderRadius(14)
           .margin({ bottom: this.showCategoryRuleOptions ? 9 : 17 })
           .onClick(() => { this.showCategoryRuleOptions = !this.showCategoryRuleOptions; })
@@ -2742,7 +2827,7 @@ struct Index {
                 .onChange((value: string) => { this.newCategoryFormats = value; })
               Text('保存后会同步加入“智能”的整理规则，自定义规则不会随使用方式切换而改变')
                 .fontSize(10)
-                .fontColor('#8A96A4')
+                .fontColor($r('app.color.text_caption'))
                 .alignSelf(ItemAlign.Start)
                 .margin({ top: 6 })
             }
@@ -2754,15 +2839,18 @@ struct Index {
             .height(46)
             .fontSize(15)
             .fontColor(Color.White)
-            .backgroundColor('#1D2633')
+            .backgroundColor($r('app.color.accent_primary'))
             .borderRadius(15)
             .onClick(() => { this.addCategory(); })
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 25 })
-        .backgroundColor('#F7FAFCF2')
+        .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showRuleEditor) {
@@ -2772,17 +2860,17 @@ struct Index {
               Text(this.editingRuleId > 0 ? '编辑整理规则' : '新建整理规则')
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#1A2532')
+                .fontColor($r('app.color.text_primary'))
               Text('填写的条件需同时满足，逗号分隔表示任一匹配')
                 .fontSize(11)
-                .fontColor('#8A96A4')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
             Text('×')
               .fontSize(23)
-              .fontColor('#7D8998')
+              .fontColor($r('app.color.text_caption'))
               .onClick(() => { this.showRuleEditor = false; })
           }
           .width('100%')
@@ -2803,7 +2891,7 @@ struct Index {
             .onChange((value: string) => { this.ruleFormats = value; })
           Text('整理到')
             .fontSize(12)
-            .fontColor('#8A96A4')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ top: 11, bottom: 7 })
           Scroll() {
@@ -2812,9 +2900,9 @@ struct Index {
                 if (category.name !== '待整理') {
                   Text(category.name)
                     .fontSize(12)
-                    .fontColor(this.ruleTargetTag === category.name ? Color.White : '#526174')
+                    .fontColor(this.ruleTargetTag === category.name ? Color.White : $r('app.color.text_body'))
                     .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-                    .backgroundColor(this.ruleTargetTag === category.name ? '#607B9F' : '#EDF1F5')
+                    .backgroundColor(this.ruleTargetTag === category.name ? $r('app.color.accent_blue') : $r('app.color.tint_gray'))
                     .borderRadius(13)
                     .onClick(() => { this.ruleTargetTag = category.name; })
                 }
@@ -2829,7 +2917,7 @@ struct Index {
             .height(46)
             .fontSize(15)
             .fontColor(Color.White)
-            .backgroundColor('#1D2633')
+            .backgroundColor($r('app.color.accent_primary'))
             .borderRadius(15)
             .margin({ top: 15 })
             .onClick(() => { this.saveCustomRule(); })
@@ -2838,8 +2926,8 @@ struct Index {
               .width('100%')
               .height(42)
               .fontSize(14)
-              .fontColor('#B24A4A')
-              .backgroundColor('#FCE7E7')
+              .fontColor($r('app.color.accent_red'))
+              .backgroundColor($r('app.color.tint_red'))
               .borderRadius(14)
               .margin({ top: 10 })
               .onClick(() => { this.requestDeleteRule(); })
@@ -2847,9 +2935,12 @@ struct Index {
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 23 })
-        .backgroundColor('#F7FAFCF2')
+        .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showQuickAdd) {
@@ -2858,18 +2949,18 @@ struct Index {
             Text('添加文件')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
             Blank()
             Text('×')
               .fontSize(23)
-              .fontColor('#7D8998')
+              .fontColor($r('app.color.text_caption'))
               .onClick(() => { this.showQuickAdd = false; })
           }
           .width('100%')
           Row() {
             Text('↗')
               .fontSize(22)
-              .fontColor('#5F789B')
+              .fontColor($r('app.color.accent_blue'))
               .width(34)
               .height(34)
               .textAlign(TextAlign.Center)
@@ -2878,12 +2969,12 @@ struct Index {
             Column() {
               Text(this.selectedUris.length > 1 ? `${this.newFileName} 等 ${this.selectedUris.length} 个文件` : this.newFileName.length > 0 ? this.newFileName : '从设备批量选择文件')
                 .fontSize(15)
-                .fontColor('#263445')
+                .fontColor($r('app.color.text_primary'))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
               Text(this.selectedUris.length > 0 ? `已选择 ${this.selectedUris.length} 个，可再次选择继续添加` : '长按第一个文件进入多选，最多 100 个')
                 .fontSize(12)
-                .fontColor('#8A96A4')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
@@ -2891,12 +2982,12 @@ struct Index {
             .margin({ left: 10 })
             Text('›')
               .fontSize(24)
-              .fontColor('#8A96A4')
+              .fontColor($r('app.color.text_caption'))
           }
           .width('100%')
           .height(66)
           .padding({ left: 12, right: 12 })
-          .backgroundColor('#F4F6F8')
+          .backgroundColor($r('app.color.tint_gray'))
           .borderRadius(16)
           .margin({ top: 18, bottom: 14 })
           .onClick(() => { this.selectFile(); })
@@ -2905,7 +2996,7 @@ struct Index {
               .width('100%')
               .height(44)
               .fontSize(14)
-              .fontColor('#526B93')
+              .fontColor($r('app.color.accent_blue'))
               .backgroundColor('#E9F0FF')
               .borderRadius(14)
               .margin({ bottom: 10 })
@@ -2916,10 +3007,10 @@ struct Index {
               Text('系统浏览不支持多选？')
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
-                .fontColor('#526174')
+                .fontColor($r('app.color.text_body'))
               Text('可以每次选择一个，再用“继续添加文件”逐个累加；也可以从系统文件应用多选后分享至“拾序”。')
                 .fontSize(11)
-                .fontColor('#8A96A4')
+                .fontColor($r('app.color.text_caption'))
                 .margin({ top: 5 })
             }
             .width('100%')
@@ -2934,16 +3025,19 @@ struct Index {
             .height(48)
             .fontSize(16)
             .fontColor(Color.White)
-            .backgroundColor('#1D2633')
+            .backgroundColor($r('app.color.accent_primary'))
             .borderRadius(16)
             .enabled(!this.isIndexing)
             .onClick(() => { this.addFile(); })
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 24 })
-        .backgroundColor('#F7FAFCF2')
+        .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
       }
 
       if (this.showFileDetail) {
@@ -2952,30 +3046,30 @@ struct Index {
             Text('文件标签')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1A2532')
+              .fontColor($r('app.color.text_primary'))
             Blank()
             Text('×')
               .fontSize(23)
-              .fontColor('#7D8998')
+              .fontColor($r('app.color.text_caption'))
               .onClick(() => { this.showFileDetail = false; })
           }
           .width('100%')
           Text(this.selectedFileName)
             .fontSize(15)
-            .fontColor('#526174')
+            .fontColor($r('app.color.text_body'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 14, bottom: 10 })
           Text('选择一个标签')
             .fontSize(13)
-            .fontColor('#8B97A6')
+            .fontColor($r('app.color.text_caption'))
             .alignSelf(ItemAlign.Start)
           Column({ space: 9 }) {
             ForEach(this.categories, (category: CategoryItem) => {
               Row() {
                 Text(category.icon)
                   .fontSize(16)
-                  .fontColor('#526B93')
+                  .fontColor($r('app.color.accent_blue'))
                   .width(26)
                   .height(26)
                   .textAlign(TextAlign.Center)
@@ -2983,11 +3077,11 @@ struct Index {
                   .borderRadius(9)
                 Text(category.name)
                   .fontSize(13)
-                  .fontColor('#526174')
+                  .fontColor($r('app.color.text_body'))
                   .margin({ left: 9 })
               }
               .padding({ left: 12, right: 14, top: 8, bottom: 8 })
-              .backgroundColor('#EDF1F5')
+              .backgroundColor($r('app.color.tint_gray'))
               .borderRadius(14)
               .onClick(() => { this.retagSelected(category.name); })
             }, (category: CategoryItem) => category.name)
@@ -2997,11 +3091,49 @@ struct Index {
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 26 })
-        .backgroundColor('#F7FAFCF2')
+        .backgroundColor($r('app.color.blur_bg_sheet'))
         .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius({ topLeft: 26, topRight: 26 })
-        .translate({ x: 0, y: this.fileSheetOffset })
-        .opacity(this.fileSheetOpacity)
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: 200 }))
+          .animation({ duration: 300, curve: Curve.EaseOut }))
+      }
+
+      if (this.scanStatusType !== 'idle') {
+        Row() {
+          Row({ space: 8 }) {
+            if (this.scanStatusType === 'progress') {
+              LoadingProgress()
+                .width(16)
+                .height(16)
+                .color($r('app.color.accent_blue'))
+            } else {
+              Text(this.scanStatusType === 'error' ? '!' : '✓')
+                .fontSize(13)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.scanStatusType === 'error' ? $r('app.color.accent_red') : $r('app.color.accent_green'))
+                .width(16)
+                .height(16)
+                .textAlign(TextAlign.Center)
+            }
+            Text(this.scanStatus)
+              .fontSize(13)
+              .fontColor($r('app.color.text_body'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .padding({ left: 16, right: 18, top: 10, bottom: 10 })
+          .backgroundColor($r('app.color.card_bg'))
+          .borderRadius(20)
+          .shadow({ radius: 12, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 4 })
+          .constraintSize({ maxWidth: '82%' })
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .position({ x: 0, y: 52 })
+        .transition(TransitionEffect.OPACITY
+          .combine(TransitionEffect.translate({ y: -20 }))
+          .animation({ duration: 250, curve: Curve.EaseOut }))
       }
     }
     .width('100%')

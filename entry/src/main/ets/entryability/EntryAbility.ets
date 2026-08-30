@@ -5,6 +5,10 @@ import { DatabaseManager } from '../data/database/DatabaseManager';
 
 const DOMAIN = 0x0000;
 
+interface CardRouteParams {
+  message: string;
+}
+
 export default class EntryAbility extends UIAbility {
   async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): Promise<void> {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
@@ -18,7 +22,9 @@ export default class EntryAbility extends UIAbility {
     }
 
     AppStorage.setOrCreate('pendingSharedUris', '');
+    AppStorage.setOrCreate('pendingCardRoute', '');
     this.receiveSharedFiles(want);
+    this.routeFromCard(want);
   }
 
   private receiveSharedFiles(want: Want): void {
@@ -46,8 +52,26 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
+  private routeFromCard(want: Want): void {
+    if (want.parameters === undefined) {
+      return;
+    }
+    const paramsValue: Object | undefined = want.parameters['params'];
+    if (typeof paramsValue === 'string') {
+      try {
+        const params: CardRouteParams = JSON.parse(paramsValue) as CardRouteParams;
+        const message: string = params.message;
+        if (message === 'recent-files' || message === 'quick-categories') {
+          AppStorage.setOrCreate('pendingCardRoute', message);
+        }
+      } catch (error) {
+      }
+    }
+  }
+
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     this.receiveSharedFiles(want);
+    this.routeFromCard(want);
   }
 
   onDestroy(): void {
