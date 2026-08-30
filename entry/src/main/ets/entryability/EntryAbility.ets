@@ -53,7 +53,7 @@ export default class EntryAbility extends UIAbility {
   onDestroy(): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
     // 关闭数据库
-    DatabaseManager.getInstance().close().catch(err => {
+    DatabaseManager.getInstance().close().catch((err: Error) => {
       hilog.error(DOMAIN, 'testTag', 'Database close failed: %{public}s', JSON.stringify(err))
     })
   }

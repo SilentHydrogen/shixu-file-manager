@@ -7,6 +7,7 @@ import { CollectionRepository } from '../../../main/ets/data/repository/Collecti
 import { FileInfo } from '../../../main/ets/data/model/FileInfo'
 import { Collection } from '../../../main/ets/data/model/Collection'
 import { DatabaseManager } from '../../../main/ets/data/database/DatabaseManager'
+import common from '@ohos.app.ability.common'
 
 export default function fileCollectionRefRepositoryTest() {
   describe('FileCollectionRefRepository', () => {
@@ -17,28 +18,26 @@ export default function fileCollectionRefRepositoryTest() {
     let testCollectionId: number
 
     beforeAll(async () => {
-      await DatabaseManager.getInstance().init(getContext())
+      await DatabaseManager.getInstance().init(getContext() as common.UIAbilityContext)
       refRepository = new FileCollectionRefRepository()
       fileRepository = new FileRepository()
       collectionRepository = new CollectionRepository()
 
       // 创建测试文件
-      const fileInfo = new FileInfo({
-        uri: 'file://test.pdf',
-        name: 'test.pdf',
-        type: 'application/pdf',
-        size: 1024,
-        path: '/data/test.pdf',
-        createdTime: Date.now(),
-        modifiedTime: Date.now()
-      })
+      const fileInfo = new FileInfo()
+      fileInfo.uri = 'file://test.pdf'
+      fileInfo.name = 'test.pdf'
+      fileInfo.type = 'application/pdf'
+      fileInfo.size = 1024
+      fileInfo.path = '/data/test.pdf'
+      fileInfo.createdTime = Date.now()
+      fileInfo.modifiedTime = Date.now()
       testFileId = await fileRepository.insert(fileInfo)
 
       // 创建测试收纳箱
-      const collection = new Collection({
-        name: 'Test Collection',
-        rules: []
-      })
+      const collection = new Collection()
+      collection.name = 'Test Collection'
+      collection.rules = []
       testCollectionId = await collectionRepository.insert(collection)
     })
 
@@ -47,12 +46,12 @@ export default function fileCollectionRefRepositoryTest() {
       await store.executeSql('DELETE FROM file_collection_refs')
     })
 
-    it('should add file-collection ref', async () => {
+    it('should add file-collection ref', 0, async () => {
       const refId = await refRepository.addRef(testFileId, testCollectionId, 0.95, 'llm')
       expect(refId).assertLarger(0)
     })
 
-    it('should find refs by file id', async () => {
+    it('should find refs by file id', 0, async () => {
       await refRepository.addRef(testFileId, testCollectionId, 0.95, 'llm')
 
       const refs = await refRepository.findByFileId(testFileId)
@@ -61,7 +60,7 @@ export default function fileCollectionRefRepositoryTest() {
       expect(refs[0].confidence).assertEqual(0.95)
     })
 
-    it('should find refs by collection id', async () => {
+    it('should find refs by collection id', 0, async () => {
       await refRepository.addRef(testFileId, testCollectionId, 0.95, 'llm')
 
       const refs = await refRepository.findByCollectionId(testCollectionId)
@@ -69,7 +68,7 @@ export default function fileCollectionRefRepositoryTest() {
       expect(refs[0].fileId).assertEqual(testFileId)
     })
 
-    it('should remove ref', async () => {
+    it('should remove ref', 0, async () => {
       await refRepository.addRef(testFileId, testCollectionId, 0.95, 'llm')
       await refRepository.removeRef(testFileId, testCollectionId)
 
@@ -77,7 +76,7 @@ export default function fileCollectionRefRepositoryTest() {
       expect(refs.length).assertEqual(0)
     })
 
-    it('should check if ref exists', async () => {
+    it('should check if ref exists', 0, async () => {
       const existsBefore = await refRepository.exists(testFileId, testCollectionId)
       expect(existsBefore).assertFalse()
 
@@ -87,14 +86,14 @@ export default function fileCollectionRefRepositoryTest() {
       expect(existsAfter).assertTrue()
     })
 
-    it('should count files in collection', async () => {
+    it('should count files in collection', 0, async () => {
       await refRepository.addRef(testFileId, testCollectionId, 0.95, 'llm')
 
       const count = await refRepository.countByCollectionId(testCollectionId)
       expect(count).assertEqual(1)
     })
 
-    it('should not add duplicate ref', async () => {
+    it('should not add duplicate ref', 0, async () => {
       await refRepository.addRef(testFileId, testCollectionId, 0.95, 'llm')
 
       // 尝试添加重复关联应该失败（UNIQUE 约束）

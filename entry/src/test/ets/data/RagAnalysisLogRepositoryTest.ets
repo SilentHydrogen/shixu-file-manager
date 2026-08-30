@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeAll, afterEach } from '@ohos/hypium'
 import { RagAnalysisLogRepository } from '../../../main/ets/data/repository/RagAnalysisLogRepository'
 import { DatabaseManager } from '../../../main/ets/data/database/DatabaseManager'
+import common from '@ohos.app.ability.common'
 
 export default function ragAnalysisLogRepositoryTest() {
   describe('RagAnalysisLogRepository', () => {
     let repository: RagAnalysisLogRepository
 
     beforeAll(async () => {
-      await DatabaseManager.getInstance().init(getContext())
+      await DatabaseManager.getInstance().init(getContext() as common.UIAbilityContext)
       repository = new RagAnalysisLogRepository()
     })
 
@@ -16,17 +17,17 @@ export default function ragAnalysisLogRepositoryTest() {
       await store.executeSql('DELETE FROM rag_analysis_logs')
     })
 
-    it('should create log with running status', async () => {
+    it('should create log with running status', 0, async () => {
       const logId = await repository.createLog('batch-001', 10)
       expect(logId).assertLarger(0)
 
       const log = await repository.findById(logId)
-      expect(log).assertNotNull()
+      expect(log).assertInstanceOf("Object")
       expect(log!.status).assertEqual('running')
       expect(log!.fileCount).assertEqual(10)
     })
 
-    it('should update log status to completed', async () => {
+    it('should update log status to completed', 0, async () => {
       const logId = await repository.createLog('batch-002', 5)
       const endTime = Date.now()
 
@@ -38,7 +39,7 @@ export default function ragAnalysisLogRepositoryTest() {
       expect(log!.llmTokensUsed).assertEqual(1500)
     })
 
-    it('should update log status to failed with error', async () => {
+    it('should update log status to failed with error', 0, async () => {
       const logId = await repository.createLog('batch-003', 8)
       const endTime = Date.now()
 
@@ -49,7 +50,7 @@ export default function ragAnalysisLogRepositoryTest() {
       expect(log!.errorMessage).assertEqual('Network error')
     })
 
-    it('should find recent logs', async () => {
+    it('should find recent logs', 0, async () => {
       await repository.createLog('batch-001', 5)
       await repository.createLog('batch-002', 10)
       await repository.createLog('batch-003', 15)
@@ -61,7 +62,7 @@ export default function ragAnalysisLogRepositoryTest() {
       expect(recent[1].batchId).assertEqual('batch-002')
     })
 
-    it('should calculate total tokens used', async () => {
+    it('should calculate total tokens used', 0, async () => {
       const log1Id = await repository.createLog('batch-001', 5)
       const log2Id = await repository.createLog('batch-002', 10)
 
@@ -72,7 +73,7 @@ export default function ragAnalysisLogRepositoryTest() {
       expect(total).assertEqual(2500)
     })
 
-    it('should calculate tokens used since time', async () => {
+    it('should calculate tokens used since time', 0, async () => {
       const now = Date.now()
       const log1Id = await repository.createLog('batch-001', 5)
 
@@ -91,7 +92,7 @@ export default function ragAnalysisLogRepositoryTest() {
       expect(total).assertEqual(1500) // 只统计新日志
     })
 
-    it('should get statistics', async () => {
+    it('should get statistics', 0, async () => {
       const log1Id = await repository.createLog('batch-001', 10)
       const log2Id = await repository.createLog('batch-002', 20)
       const log3Id = await repository.createLog('batch-003', 15)
@@ -107,7 +108,7 @@ export default function ragAnalysisLogRepositoryTest() {
       expect(stats.successRate).assertClose(66.67, 0.1) // 2/3 * 100
     })
 
-    it('should delete old logs', async () => {
+    it('should delete old logs', 0, async () => {
       const now = Date.now()
       const log1Id = await repository.createLog('batch-old', 5)
 

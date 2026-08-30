@@ -3,6 +3,11 @@ import { DatabaseManager } from '../database/DatabaseManager'
 import { DatabaseConfig } from '../database/DatabaseConfig'
 import { VectorStorageTier, TierType } from '../model/VectorStorageTier'
 
+interface StorageStats {
+  hotCount: number
+  coldCount: number
+}
+
 export class VectorStorageTierRepository {
   private async getStore(): Promise<relationalStore.RdbStore> {
     return await DatabaseManager.getInstance().getStore()
@@ -20,7 +25,7 @@ export class VectorStorageTierRepository {
       const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_VECTOR_STORAGE_TIERS)
       predicates.equalTo('file_id', fileId)
 
-      const values = {
+      const values: relationalStore.ValuesBucket = {
         tier: tier,
         last_accessed: Date.now()
       }
@@ -28,12 +33,11 @@ export class VectorStorageTierRepository {
       await store.update(values, predicates)
     } else {
       // 插入新记录
-      const tierInfo = new VectorStorageTier({
-        fileId,
-        tier,
-        lastAccessed: Date.now(),
-        accessCount: 1
-      })
+      const tierInfo = new VectorStorageTier()
+      tierInfo.fileId = fileId
+      tierInfo.tier = tier
+      tierInfo.lastAccessed = Date.now()
+      tierInfo.accessCount = 1
 
       const store = await this.getStore()
       const values = tierInfo.toValuesBucket()
@@ -167,7 +171,7 @@ export class VectorStorageTierRepository {
   /**
    * 获取存储统计信息
    */
-  async getStats(): Promise<{ hotCount: number, coldCount: number }> {
+  async getStats(): Promise<StorageStats> {
     const store = await this.getStore()
     const sql = `
       SELECT
@@ -182,10 +186,12 @@ export class VectorStorageTierRepository {
       if (resultSet.goToFirstRow()) {
         const hotCount = resultSet.getLong(0)
         const coldCount = resultSet.getLong(1)
-        return { hotCount, coldCount }
+        const stats: StorageStats = { hotCount, coldCount }
+        return stats
       }
 
-      return { hotCount: 0, coldCount: 0 }
+      const emptyStats: StorageStats = { hotCount: 0, coldCount: 0 }
+      return emptyStats
     } finally {
       resultSet.close()
     }
@@ -194,26 +200,26 @@ export class VectorStorageTierRepository {
   /**
    * 辅助方法：将 ResultSet 当前行转换为对象
    */
-  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, any> {
+  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, Object> {
     const columnNames = resultSet.columnNames
-    const row: Record<string, any> = {}
+    const row: Record<string, Object> = {}
 
     for (let i = 0; i < columnNames.length; i++) {
       const columnName = columnNames[i]
-      const columnType = resultSet.getColumnType(i)
+      const columnType = resultSet.getColumnTypeSync(i)
 
       switch (columnType) {
-        case relationalStore.ColumnType.TYPE_INTEGER:
+        case relationalStore.ColumnType.INTEGER:
           row[columnName] = resultSet.getLong(i)
           break
-        case relationalStore.ColumnType.TYPE_FLOAT:
+        case relationalStore.ColumnType.REAL:
           row[columnName] = resultSet.getDouble(i)
           break
-        case relationalStore.ColumnType.TYPE_STRING:
+        case relationalStore.ColumnType.TEXT:
           row[columnName] = resultSet.getString(i)
           break
         default:
-          row[columnName] = null
+          row[columnName] = ''
       }
     }
 

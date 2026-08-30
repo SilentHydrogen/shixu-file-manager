@@ -6,6 +6,11 @@ export interface SearchResult {
   score: number
 }
 
+export interface IndexStats {
+  totalVectors: number
+  dimension: number
+}
+
 export class VectorIndex {
   private store: VectorStore
   private index: Map<number, number[]> = new Map()
@@ -54,9 +59,15 @@ export class VectorIndex {
     const results: SearchResult[] = []
 
     // 计算查询向量与所有索引向量的余弦相似度
-    for (const [fileId, embedding] of this.index.entries()) {
+    const iterator = this.index.entries()
+    let entry = iterator.next()
+    while (!entry.done) {
+      const fileId = entry.value[0]
+      const embedding = entry.value[1]
       const score = this.cosineSimilarity(queryVector, embedding)
-      results.push({ fileId, score })
+      const result: SearchResult = { fileId, score }
+      results.push(result)
+      entry = iterator.next()
     }
 
     // 按相似度降序排序，取 top K
@@ -83,11 +94,12 @@ export class VectorIndex {
   /**
    * 获取索引统计信息
    */
-  getStats(): { totalVectors: number, dimension: number } {
-    const firstVector = this.index.values().next().value
-    return {
+  getStats(): IndexStats {
+    const firstVector = this.index.values().next().value as number[] | undefined
+    const stats: IndexStats = {
       totalVectors: this.index.size,
       dimension: firstVector ? firstVector.length : 0
     }
+    return stats
   }
 }

@@ -8,6 +8,11 @@ import { EmbeddingModel } from '../ai/model/EmbeddingModel'
 import { FileProcessingQueue } from './FileProcessingQueue'
 import { FileInfo } from '../data/model/FileInfo'
 
+export interface SearchResult {
+  file: FileInfo
+  score: number
+}
+
 export class RagAnalysisService {
   private fileRepo: FileRepository
   private vectorStore: VectorStore
@@ -99,7 +104,7 @@ export class RagAnalysisService {
   /**
    * 语义搜索
    */
-  async search(query: string, topK: number = 10): Promise<Array<{ file: FileInfo, score: number }>> {
+  async search(query: string, topK: number = 10): Promise<SearchResult[]> {
     // 生成查询向量
     const queryVector = await this.embeddingModel.encode(query)
 
@@ -107,15 +112,16 @@ export class RagAnalysisService {
     const results = await this.vectorIndex.search(queryVector, topK)
 
     // 填充文件信息
-    const enrichedResults: Array<{ file: FileInfo, score: number }> = []
+    const enrichedResults: SearchResult[] = []
 
     for (const result of results) {
       const file = await this.fileRepo.findById(result.fileId)
       if (file) {
-        enrichedResults.push({
+        const searchResult: SearchResult = {
           file,
           score: result.score
-        })
+        }
+        enrichedResults.push(searchResult)
       }
     }
 

@@ -3,13 +3,13 @@ import { DatabaseManager } from '../../../main/ets/data/database/DatabaseManager
 
 export default function databaseManagerTest() {
   describe('DatabaseManager', () => {
-    it('should initialize database successfully', async () => {
+    it('should initialize database successfully', 0, async () => {
       const dbManager = DatabaseManager.getInstance()
       const store = await dbManager.getStore()
-      expect(store).assertNotNull()
+      expect(store).assertInstanceOf("Object")
     })
 
-    it('should create files table', async () => {
+    it('should create files table', 0, async () => {
       const dbManager = DatabaseManager.getInstance()
       const store = await dbManager.getStore()
 

@@ -1,50 +1,48 @@
 // entry/src/main/ets/data/model/FileInfo.ets
 
+import relationalStore from '@ohos.data.relationalStore'
+
 export class FileInfo {
   id?: number
-  uri: string
-  name: string
-  type: string
-  size: number
-  path: string
-  createdTime: number
-  modifiedTime: number
+  uri: string = ''
+  name: string = ''
+  type: string = ''
+  size: number = 0
+  path: string = ''
+  createdTime: number = 0
+  modifiedTime: number = 0
   contentHash?: string
   isProcessed: boolean = false
   processedTime?: number
   contentSummary?: string
   extractedKeywords?: string[]
 
-  constructor(init?: Partial<FileInfo>) {
-    Object.assign(this, init)
-  }
-
   /**
    * 从数据库行转换为 FileInfo
    */
-  static fromRow(row: any): FileInfo {
-    return new FileInfo({
-      id: row.id,
-      uri: row.uri,
-      name: row.name,
-      type: row.type,
-      size: row.size,
-      path: row.path,
-      createdTime: row.created_time,
-      modifiedTime: row.modified_time,
-      contentHash: row.content_hash,
-      isProcessed: row.is_processed === 1,
-      processedTime: row.processed_time,
-      contentSummary: row.content_summary,
-      extractedKeywords: row.extracted_keywords ? JSON.parse(row.extracted_keywords) : []
-    })
+  static fromRow(row: Record<string, Object>): FileInfo {
+    const fileInfo = new FileInfo()
+    fileInfo.id = row.id as number
+    fileInfo.uri = row.uri as string
+    fileInfo.name = row.name as string
+    fileInfo.type = row.type as string
+    fileInfo.size = row.size as number
+    fileInfo.path = row.path as string
+    fileInfo.createdTime = row.created_time as number
+    fileInfo.modifiedTime = row.modified_time as number
+    fileInfo.contentHash = row.content_hash as string
+    fileInfo.isProcessed = (row.is_processed as number) === 1
+    fileInfo.processedTime = row.processed_time as number
+    fileInfo.contentSummary = row.content_summary as string
+    fileInfo.extractedKeywords = row.extracted_keywords ? JSON.parse(row.extracted_keywords as string) as string[] : []
+    return fileInfo
   }
 
   /**
    * 转换为数据库行对象
    */
-  toValuesBucket(): Record<string, any> {
-    const values: Record<string, any> = {
+  toValuesBucket(): relationalStore.ValuesBucket {
+    const values: relationalStore.ValuesBucket = {
       uri: this.uri,
       name: this.name,
       type: this.type,

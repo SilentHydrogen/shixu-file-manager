@@ -1,40 +1,38 @@
+import relationalStore from '@ohos.data.relationalStore'
+
 export type LogStatus = 'running' | 'completed' | 'failed'
 
 export class RagAnalysisLog {
   id?: number
-  batchId: string
-  fileCount: number
+  batchId: string = ''
+  fileCount: number = 0
   startTime: number = Date.now()
   endTime?: number
   llmTokensUsed?: number
   status: LogStatus = 'running'
   errorMessage?: string
 
-  constructor(init?: Partial<RagAnalysisLog>) {
-    Object.assign(this, init)
-  }
-
   /**
    * 从数据库行转换
    */
-  static fromRow(row: any): RagAnalysisLog {
-    return new RagAnalysisLog({
-      id: row.id,
-      batchId: row.batch_id,
-      fileCount: row.file_count,
-      startTime: row.start_time,
-      endTime: row.end_time,
-      llmTokensUsed: row.llm_tokens_used,
-      status: row.status as LogStatus,
-      errorMessage: row.error_message
-    })
+  static fromRow(row: Record<string, Object>): RagAnalysisLog {
+    const log = new RagAnalysisLog()
+    log.id = row.id as number
+    log.batchId = row.batch_id as string
+    log.fileCount = row.file_count as number
+    log.startTime = row.start_time as number
+    log.endTime = row.end_time as number
+    log.llmTokensUsed = row.llm_tokens_used as number
+    log.status = row.status as LogStatus
+    log.errorMessage = row.error_message as string
+    return log
   }
 
   /**
    * 转换为数据库行对象
    */
-  toValuesBucket(): Record<string, any> {
-    const values: Record<string, any> = {
+  toValuesBucket(): relationalStore.ValuesBucket {
+    const values: relationalStore.ValuesBucket = {
       batch_id: this.batchId,
       file_count: this.fileCount,
       start_time: this.startTime,

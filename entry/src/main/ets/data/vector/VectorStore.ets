@@ -13,10 +13,9 @@ export class VectorStore {
   async saveEmbedding(fileId: number, embedding: number[]): Promise<void> {
     const store = await this.getStore()
 
-    const fileEmbedding = new FileEmbedding({
-      fileId,
-      embedding
-    })
+    const fileEmbedding = new FileEmbedding()
+    fileEmbedding.fileId = fileId
+    fileEmbedding.embedding = embedding
 
     const values = fileEmbedding.toValuesBucket()
 
@@ -28,8 +27,8 @@ export class VectorStore {
 
     await store.executeSql(sql, [
       fileId.toString(),
-      values.embedding_vector,
-      values.created_time.toString()
+      values.embedding_vector as string,
+      (values.created_time as number).toString()
     ])
   }
 
@@ -85,23 +84,26 @@ export class VectorStore {
     await store.delete(predicates)
   }
 
-  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, any> {
+  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, Object> {
     const columnNames = resultSet.columnNames
-    const row: Record<string, any> = {}
+    const row: Record<string, Object> = {}
 
     for (let i = 0; i < columnNames.length; i++) {
       const columnName = columnNames[i]
-      const columnType = resultSet.getColumnType(i)
+      const columnType = resultSet.getColumnTypeSync(i)
 
       switch (columnType) {
-        case relationalStore.ColumnType.TYPE_INTEGER:
+        case relationalStore.ColumnType.INTEGER:
           row[columnName] = resultSet.getLong(i)
           break
-        case relationalStore.ColumnType.TYPE_STRING:
+        case relationalStore.ColumnType.TEXT:
           row[columnName] = resultSet.getString(i)
           break
+        case relationalStore.ColumnType.REAL:
+          row[columnName] = resultSet.getDouble(i)
+          break
         default:
-          row[columnName] = null
+          row[columnName] = ''
       }
     }
 

@@ -3,6 +3,7 @@ import { VectorStorageTierRepository } from '../../../main/ets/data/repository/V
 import { DatabaseManager } from '../../../main/ets/data/database/DatabaseManager'
 import { FileRepository } from '../../../main/ets/data/repository/FileRepository'
 import { FileInfo } from '../../../main/ets/data/model/FileInfo'
+import common from '@ohos.app.ability.common'
 
 export default function vectorStorageTierRepositoryTest() {
   describe('VectorStorageTierRepository', () => {
@@ -11,20 +12,19 @@ export default function vectorStorageTierRepositoryTest() {
     let testFileId: number
 
     beforeAll(async () => {
-      await DatabaseManager.getInstance().init(getContext())
+      await DatabaseManager.getInstance().init(getContext() as common.UIAbilityContext)
       repository = new VectorStorageTierRepository()
       fileRepository = new FileRepository()
 
       // 创建测试文件
-      const fileInfo = new FileInfo({
-        uri: 'file://test.pdf',
-        name: 'test.pdf',
-        type: 'application/pdf',
-        size: 1024,
-        path: '/data/test.pdf',
-        createdTime: Date.now(),
-        modifiedTime: Date.now()
-      })
+      const fileInfo = new FileInfo()
+      fileInfo.uri = 'file://test.pdf'
+      fileInfo.name = 'test.pdf'
+      fileInfo.type = 'application/pdf'
+      fileInfo.size = 1024
+      fileInfo.path = '/data/test.pdf'
+      fileInfo.createdTime = Date.now()
+      fileInfo.modifiedTime = Date.now()
       testFileId = await fileRepository.insert(fileInfo)
     })
 
@@ -33,13 +33,13 @@ export default function vectorStorageTierRepositoryTest() {
       await store.executeSql('DELETE FROM vector_storage_tiers')
     })
 
-    it('should set file tier', async () => {
+    it('should set file tier', 0, async () => {
       await repository.setTier(testFileId, 'hot')
       const tier = await repository.getTier(testFileId)
       expect(tier).assertEqual('hot')
     })
 
-    it('should update existing tier', async () => {
+    it('should update existing tier', 0, async () => {
       await repository.setTier(testFileId, 'hot')
       await repository.setTier(testFileId, 'cold')
 
@@ -47,7 +47,7 @@ export default function vectorStorageTierRepositoryTest() {
       expect(tier).assertEqual('cold')
     })
 
-    it('should find files by tier', async () => {
+    it('should find files by tier', 0, async () => {
       await repository.setTier(testFileId, 'hot')
 
       const hotFiles = await repository.findByTier('hot')
@@ -58,7 +58,7 @@ export default function vectorStorageTierRepositoryTest() {
       expect(coldFiles.length).assertEqual(0)
     })
 
-    it('should update access time and count', async () => {
+    it('should update access time and count', 0, async () => {
       await repository.setTier(testFileId, 'hot')
 
       const before = await repository.findByTier('hot')
@@ -71,7 +71,7 @@ export default function vectorStorageTierRepositoryTest() {
       expect(after[0].lastAccessed).assertLarger(before[0].lastAccessed)
     })
 
-    it('should find cold candidates', async () => {
+    it('should find cold candidates', 0, async () => {
       // 设置一个很旧的访问时间
       await repository.setTier(testFileId, 'hot')
 
@@ -87,7 +87,7 @@ export default function vectorStorageTierRepositoryTest() {
       expect(candidates[0]).assertEqual(testFileId)
     })
 
-    it('should demote to cold in batch', async () => {
+    it('should demote to cold in batch', 0, async () => {
       await repository.setTier(testFileId, 'hot')
       await repository.demoteToCold([testFileId])
 
@@ -95,7 +95,7 @@ export default function vectorStorageTierRepositoryTest() {
       expect(tier).assertEqual('cold')
     })
 
-    it('should promote to hot in batch', async () => {
+    it('should promote to hot in batch', 0, async () => {
       await repository.setTier(testFileId, 'cold')
       await repository.promoteToHot([testFileId])
 
@@ -103,16 +103,15 @@ export default function vectorStorageTierRepositoryTest() {
       expect(tier).assertEqual('hot')
     })
 
-    it('should get storage stats', async () => {
-      const file2 = new FileInfo({
-        uri: 'file://test2.pdf',
-        name: 'test2.pdf',
-        type: 'application/pdf',
-        size: 2048,
-        path: '/data/test2.pdf',
-        createdTime: Date.now(),
-        modifiedTime: Date.now()
-      })
+    it('should get storage stats', 0, async () => {
+      const file2 = new FileInfo()
+      file2.uri = 'file://test2.pdf'
+      file2.name = 'test2.pdf'
+      file2.type = 'application/pdf'
+      file2.size = 2048
+      file2.path = '/data/test2.pdf'
+      file2.createdTime = Date.now()
+      file2.modifiedTime = Date.now()
       const file2Id = await fileRepository.insert(file2)
 
       await repository.setTier(testFileId, 'hot')

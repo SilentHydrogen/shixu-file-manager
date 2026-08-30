@@ -35,7 +35,14 @@ export class CollectionRule {
   enabled: boolean = true
   createdTime: number = Date.now()
 
-  constructor(init?: Partial<CollectionRule>) {
-    Object.assign(this, init)
+  constructor(init?: CollectionRule) {
+    if (init) {
+      this.id = init.id ?? 0
+      this.collectionId = init.collectionId ?? 0
+      this.priority = init.priority ?? 0
+      this.conditions = init.conditions ?? []
+      this.enabled = init.enabled ?? true
+      this.createdTime = init.createdTime ?? Date.now()
+    }
   }
 }

@@ -3,6 +3,14 @@ import { DatabaseManager } from '../database/DatabaseManager'
 import { DatabaseConfig } from '../database/DatabaseConfig'
 import { RagAnalysisLog, LogStatus } from '../model/RagAnalysisLog'
 
+interface RagStatistics {
+  totalBatches: number
+  totalFiles: number
+  totalTokens: number
+  successRate: number
+  avgDuration: number
+}
+
 export class RagAnalysisLogRepository {
   private async getStore(): Promise<relationalStore.RdbStore> {
     return await DatabaseManager.getInstance().getStore()
@@ -12,11 +20,10 @@ export class RagAnalysisLogRepository {
    * 创建分析日志
    */
   async createLog(batchId: string, fileCount: number): Promise<number> {
-    const log = new RagAnalysisLog({
-      batchId,
-      fileCount,
-      status: 'running'
-    })
+    const log = new RagAnalysisLog()
+    log.batchId = batchId
+    log.fileCount = fileCount
+    log.status = 'running'
 
     const store = await this.getStore()
     const values = log.toValuesBucket()
@@ -37,7 +44,7 @@ export class RagAnalysisLogRepository {
     const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_RAG_ANALYSIS_LOGS)
     predicates.equalTo('id', logId)
 
-    const values: Record<string, any> = {
+    const values: relationalStore.ValuesBucket = {
       status: status
     }
 
@@ -76,7 +83,7 @@ export class RagAnalysisLogRepository {
     const store = await this.getStore()
     const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_RAG_ANALYSIS_LOGS)
     predicates.orderByDesc('start_time')
-    predicates.limit(limit)
+    predicates.limitAs(limit)
 
     const resultSet = await store.query(predicates)
     const logs: RagAnalysisLog[] = []
@@ -121,13 +128,7 @@ export class RagAnalysisLogRepository {
   /**
    * 获取统计信息
    */
-  async getStatistics(sinceTime?: number): Promise<{
-    totalBatches: number,
-    totalFiles: number,
-    totalTokens: number,
-    successRate: number,
-    avgDuration: number
-  }> {
+  async getStatistics(sinceTime?: number): Promise<RagStatistics> {
     const store = await this.getStore()
     let sql = `
       SELECT
@@ -157,22 +158,24 @@ export class RagAnalysisLogRepository {
 
         const successRate = totalBatches > 0 ? (completed / totalBatches) * 100 : 0
 
-        return {
+        const stats: RagStatistics = {
           totalBatches,
           totalFiles,
           totalTokens,
           successRate,
           avgDuration
         }
+        return stats
       }
 
-      return {
+      const emptyStats: RagStatistics = {
         totalBatches: 0,
         totalFiles: 0,
         totalTokens: 0,
         successRate: 0,
         avgDuration: 0
       }
+      return emptyStats
     } finally {
       resultSet.close()
     }
@@ -194,26 +197,26 @@ export class RagAnalysisLogRepository {
   /**
    * 辅助方法：将 ResultSet 当前行转换为对象
    */
-  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, any> {
+  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, Object> {
     const columnNames = resultSet.columnNames
-    const row: Record<string, any> = {}
+    const row: Record<string, Object> = {}
 
     for (let i = 0; i < columnNames.length; i++) {
       const columnName = columnNames[i]
-      const columnType = resultSet.getColumnType(i)
+      const columnType = resultSet.getColumnTypeSync(i)
 
       switch (columnType) {
-        case relationalStore.ColumnType.TYPE_INTEGER:
+        case relationalStore.ColumnType.INTEGER:
           row[columnName] = resultSet.getLong(i)
           break
-        case relationalStore.ColumnType.TYPE_FLOAT:
+        case relationalStore.ColumnType.REAL:
           row[columnName] = resultSet.getDouble(i)
           break
-        case relationalStore.ColumnType.TYPE_STRING:
+        case relationalStore.ColumnType.TEXT:
           row[columnName] = resultSet.getString(i)
           break
         default:
-          row[columnName] = null
+          row[columnName] = ''
       }
     }
 

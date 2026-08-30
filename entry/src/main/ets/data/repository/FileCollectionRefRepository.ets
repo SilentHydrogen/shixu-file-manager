@@ -19,12 +19,11 @@ export class FileCollectionRefRepository {
     confidence: number = 1.0,
     createdBy: CreatedBy = 'llm'
   ): Promise<number> {
-    const ref = new FileCollectionRef({
-      fileId,
-      collectionId,
-      confidence,
-      createdBy
-    })
+    const ref = new FileCollectionRef()
+    ref.fileId = fileId
+    ref.collectionId = collectionId
+    ref.confidence = confidence
+    ref.createdBy = createdBy
 
     const store = await this.getStore()
     const values = ref.toValuesBucket()
@@ -129,26 +128,26 @@ export class FileCollectionRefRepository {
   /**
    * 辅助方法：将 ResultSet 当前行转换为对象
    */
-  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, any> {
+  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, Object> {
     const columnNames = resultSet.columnNames
-    const row: Record<string, any> = {}
+    const row: Record<string, Object> = {}
 
     for (let i = 0; i < columnNames.length; i++) {
       const columnName = columnNames[i]
-      const columnType = resultSet.getColumnType(i)
+      const columnType = resultSet.getColumnTypeSync(i)
 
       switch (columnType) {
-        case relationalStore.ColumnType.TYPE_INTEGER:
+        case relationalStore.ColumnType.INTEGER:
           row[columnName] = resultSet.getLong(i)
           break
-        case relationalStore.ColumnType.TYPE_FLOAT:
+        case relationalStore.ColumnType.REAL:
           row[columnName] = resultSet.getDouble(i)
           break
-        case relationalStore.ColumnType.TYPE_STRING:
+        case relationalStore.ColumnType.TEXT:
           row[columnName] = resultSet.getString(i)
           break
         default:
-          row[columnName] = null
+          row[columnName] = ''
       }
     }
 

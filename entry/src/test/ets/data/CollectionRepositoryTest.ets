@@ -5,13 +5,14 @@ import { CollectionRepository } from '../../../main/ets/data/repository/Collecti
 import { Collection } from '../../../main/ets/data/model/Collection'
 import { CollectionRule, ConditionType, OperatorType } from '../../../main/ets/data/model/CollectionRule'
 import { DatabaseManager } from '../../../main/ets/data/database/DatabaseManager'
+import common from '@ohos.app.ability.common'
 
 export default function collectionRepositoryTest() {
   describe('CollectionRepository', () => {
     let repository: CollectionRepository
 
     beforeAll(async () => {
-      await DatabaseManager.getInstance().init(getContext())
+      await DatabaseManager.getInstance().init(getContext() as common.UIAbilityContext)
       repository = new CollectionRepository()
     })
 
@@ -20,39 +21,35 @@ export default function collectionRepositoryTest() {
       await store.executeSql('DELETE FROM collections')
     })
 
-    it('should insert collection with rules', async () => {
-      const rule: CollectionRule = new CollectionRule({
-        priority: 1,
-        conditions: [
-          {
-            type: ConditionType.FILE_TYPE,
-            operator: OperatorType.EQUALS,
-            value: 'pdf'
-          }
-        ]
-      })
+    it('should insert collection with rules', 0, async () => {
+      const rule = new CollectionRule()
+      rule.priority = 1
+      rule.conditions = [
+        {
+          type: ConditionType.FILE_TYPE,
+          operator: OperatorType.EQUALS,
+          value: 'pdf'
+        }
+      ]
 
-      const collection = new Collection({
-        name: 'PDF Documents',
-        icon: 'ic_pdf',
-        color: '#FF0000',
-        rules: [rule]
-      })
+      const collection = new Collection()
+      collection.name = 'PDF Documents'
+      collection.icon = 'ic_pdf'
+      collection.color = '#FF0000'
+      collection.rules = [rule]
 
       const collectionId = await repository.insert(collection)
       expect(collectionId).assertLarger(0)
     })
 
-    it('should find all collections', async () => {
-      const collection1 = new Collection({
-        name: 'Collection 1',
-        rules: []
-      })
+    it('should find all collections', 0, async () => {
+      const collection1 = new Collection()
+      collection1.name = 'Collection 1'
+      collection1.rules = []
 
-      const collection2 = new Collection({
-        name: 'Collection 2',
-        rules: []
-      })
+      const collection2 = new Collection()
+      collection2.name = 'Collection 2'
+      collection2.rules = []
 
       await repository.insert(collection1)
       await repository.insert(collection2)
@@ -61,26 +58,24 @@ export default function collectionRepositoryTest() {
       expect(all.length).assertEqual(2)
     })
 
-    it('should find collection by id', async () => {
-      const collection = new Collection({
-        name: 'Test Collection',
-        description: 'Test description',
-        rules: []
-      })
+    it('should find collection by id', 0, async () => {
+      const collection = new Collection()
+      collection.name = 'Test Collection'
+      collection.description = 'Test description'
+      collection.rules = []
 
       const collectionId = await repository.insert(collection)
       const found = await repository.findById(collectionId)
 
-      expect(found).assertNotNull()
+      expect(found).assertInstanceOf("Object")
       expect(found!.name).assertEqual('Test Collection')
       expect(found!.description).assertEqual('Test description')
     })
 
-    it('should update collection', async () => {
-      const collection = new Collection({
-        name: 'Original Name',
-        rules: []
-      })
+    it('should update collection', 0, async () => {
+      const collection = new Collection()
+      collection.name = 'Original Name'
+      collection.rules = []
 
       const collectionId = await repository.insert(collection)
 
@@ -94,11 +89,10 @@ export default function collectionRepositoryTest() {
       expect(updated!.color).assertEqual('#00FF00')
     })
 
-    it('should delete collection', async () => {
-      const collection = new Collection({
-        name: 'To Delete',
-        rules: []
-      })
+    it('should delete collection', 0, async () => {
+      const collection = new Collection()
+      collection.name = 'To Delete'
+      collection.rules = []
 
       const collectionId = await repository.insert(collection)
       await repository.delete(collectionId)
@@ -107,18 +101,16 @@ export default function collectionRepositoryTest() {
       expect(deleted).assertNull()
     })
 
-    it('should find preset collections', async () => {
-      const preset = new Collection({
-        name: 'Preset Collection',
-        isPreset: true,
-        rules: []
-      })
+    it('should find preset collections', 0, async () => {
+      const preset = new Collection()
+      preset.name = 'Preset Collection'
+      preset.isPreset = true
+      preset.rules = []
 
-      const custom = new Collection({
-        name: 'Custom Collection',
-        isPreset: false,
-        rules: []
-      })
+      const custom = new Collection()
+      custom.name = 'Custom Collection'
+      custom.isPreset = false
+      custom.rules = []
 
       await repository.insert(preset)
       await repository.insert(custom)

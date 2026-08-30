@@ -5,31 +5,29 @@ import { FileInfo } from '../../../main/ets/data/model/FileInfo'
 
 export default function fileInfoTest() {
   describe('FileInfo', () => {
-    it('should create FileInfo from constructor', () => {
-      const fileInfo = new FileInfo({
-        uri: 'file://test.pdf',
-        name: 'test.pdf',
-        type: 'application/pdf',
-        size: 1024,
-        path: '/data/storage/test.pdf',
-        createdTime: Date.now(),
-        modifiedTime: Date.now()
-      })
+    it('should create FileInfo from constructor', 0, () => {
+      const fileInfo = new FileInfo()
+      fileInfo.uri = 'file://test.pdf'
+      fileInfo.name = 'test.pdf'
+      fileInfo.type = 'application/pdf'
+      fileInfo.size = 1024
+      fileInfo.path = '/data/storage/test.pdf'
+      fileInfo.createdTime = Date.now()
+      fileInfo.modifiedTime = Date.now()
 
       expect(fileInfo.name).assertEqual('test.pdf')
       expect(fileInfo.isProcessed).assertFalse()
     })
 
-    it('should convert to ValuesBucket correctly', () => {
-      const fileInfo = new FileInfo({
-        uri: 'file://test.pdf',
-        name: 'test.pdf',
-        type: 'application/pdf',
-        size: 1024,
-        path: '/data/storage/test.pdf',
-        createdTime: 123456789,
-        modifiedTime: 123456789
-      })
+    it('should convert to ValuesBucket correctly', 0, () => {
+      const fileInfo = new FileInfo()
+      fileInfo.uri = 'file://test.pdf'
+      fileInfo.name = 'test.pdf'
+      fileInfo.type = 'application/pdf'
+      fileInfo.size = 1024
+      fileInfo.path = '/data/storage/test.pdf'
+      fileInfo.createdTime = 123456789
+      fileInfo.modifiedTime = 123456789
 
       const bucket = fileInfo.toValuesBucket()
       expect(bucket.uri).assertEqual('file://test.pdf')

@@ -4,12 +4,12 @@ export class DatabaseSchema {
    */
   static getCreateTableSQLs(): string[] {
     return [
-      this.createFilesTable(),
-      this.createCollectionsTable(),
-      this.createFileCollectionRefsTable(),
-      this.createVectorStorageTiersTable(),
-      this.createRagAnalysisLogsTable(),
-      this.createFileEmbeddingsTable()
+      DatabaseSchema.createFilesTable(),
+      DatabaseSchema.createCollectionsTable(),
+      DatabaseSchema.createFileCollectionRefsTable(),
+      DatabaseSchema.createVectorStorageTiersTable(),
+      DatabaseSchema.createRagAnalysisLogsTable(),
+      DatabaseSchema.createFileEmbeddingsTable()
     ]
   }
 

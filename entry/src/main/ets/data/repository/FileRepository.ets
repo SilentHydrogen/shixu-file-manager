@@ -48,7 +48,7 @@ export class FileRepository {
     const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
     predicates.equalTo('is_processed', 0)
     predicates.orderByDesc('created_time')
-    predicates.limit(limit)
+    predicates.limitAs(limit)
 
     const resultSet = await store.query(predicates)
     const files: FileInfo[] = []
@@ -72,7 +72,7 @@ export class FileRepository {
     const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
     predicates.equalTo('id', fileId)
 
-    const values = {
+    const values: relationalStore.ValuesBucket = {
       is_processed: 1,
       processed_time: Date.now()
     }
@@ -88,7 +88,7 @@ export class FileRepository {
     const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
     predicates.equalTo('id', fileId)
 
-    const values = {
+    const values: relationalStore.ValuesBucket = {
       content_summary: summary,
       extracted_keywords: JSON.stringify(keywords)
     }
@@ -149,29 +149,29 @@ export class FileRepository {
   /**
    * 辅助方法：将 ResultSet 当前行转换为对象
    */
-  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, any> {
+  private resultSetToObject(resultSet: relationalStore.ResultSet): Record<string, Object> {
     const columnNames = resultSet.columnNames
-    const row: Record<string, any> = {}
+    const row: Record<string, Object> = {}
 
     for (let i = 0; i < columnNames.length; i++) {
       const columnName = columnNames[i]
-      const columnType = resultSet.getColumnType(i)
+      const columnType = resultSet.getColumnTypeSync(i)
 
       switch (columnType) {
-        case relationalStore.ColumnType.TYPE_INTEGER:
+        case relationalStore.ColumnType.INTEGER:
           row[columnName] = resultSet.getLong(i)
           break
-        case relationalStore.ColumnType.TYPE_FLOAT:
+        case relationalStore.ColumnType.REAL:
           row[columnName] = resultSet.getDouble(i)
           break
-        case relationalStore.ColumnType.TYPE_STRING:
+        case relationalStore.ColumnType.TEXT:
           row[columnName] = resultSet.getString(i)
           break
-        case relationalStore.ColumnType.TYPE_BLOB:
+        case relationalStore.ColumnType.BLOB:
           row[columnName] = resultSet.getBlob(i)
           break
         default:
-          row[columnName] = null
+          row[columnName] = ''
       }
     }
 
