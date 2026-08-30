@@ -1,0 +1,417 @@
+{
+  "schemaVersion": 3,
+  "mode": "tdd",
+  "requirements": [
+    {
+      "id": "ui-entry",
+      "text": "`Index.ets` 的“智能”页必须显示并可操作 AI 智能整理、文件问答、LLM 配置入口；`ChatPage`/`LLMConfigPage` 可到达并注册；配置后无需重启刷新状态。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "ui-visible"
+      ]
+    },
+    {
+      "id": "llm-service",
+      "text": "LLM 主能力使用 OpenAI-compatible Chat，支持 API Key、Chat Base URL、Chat Model、max tokens、temperature、测试连接、清除密钥；API Key 用 UniversalKeystoreKit/HUKS 保护，非敏感配置持久化，错误脱敏。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "llm-ready"
+      ]
+    },
+    {
+      "id": "unified-files",
+      "text": "首次启用 AI 迁移旧 `Preferences` 文件到 RAG 数据库；之后 `FileRepository` 统一承载导入/监控文件元数据、URI、指纹、正文片段、分类和处理状态，Preferences 仅保留 UI 偏好。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "data-unified"
+      ]
+    },
+    {
+      "id": "directory-monitor",
+      "text": "通过系统文件夹选择器授权最多 8 个目录，提供 QQ 下载、微信文件、浏览器下载、夸克下载快捷项及自定义目录；快捷项不硬编码路径；保存持久化 URI；递归增量扫描，Watcher 监听，启动/前台恢复补扫，授权失效可重新授权。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "directory-safe"
+      ]
+    },
+    {
+      "id": "scheduled-batch",
+      "text": "新文件只入待分析队列；WorkScheduler 按充电或非工作时段执行，默认 02:00–04:00、充电开启、每日定时关闭、默认仅 Wi-Fi；两触发可同时启用；批次最多 20 个；成功不重复，临时错误最多重试 3 次，永久错误不循环重试。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "schedule-safe"
+      ]
+    },
+    {
+      "id": "local-embedding",
+      "text": "通过现有 C++ NAPI 接入 MindSpore Lite 2.3.0 的 `bge-small-zh-v1.5-int8.ms`、`tokenizer.json`、`config.json`；输入 `int64[1,512]`，CLS pooling、L2 归一化、512 维；batch/cache；作为标准 RAG 编码器服务分类和问答召回，不生成答案。模型 `.ms` 用 Git LFS 提交并推送 `test/rag-llm`，来源/许可证/转换说明随仓库提交。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "embedding-real"
+      ]
+    },
+    {
+      "id": "content-rag",
+      "text": "AI 前在设备本地提取文本/OCR；PDF/PPTX 覆盖式取样封面/目录及前 20% 页面，上传文本每文件最多 8,000 字符；不上传原始二进制。问答索引按约 256 tokens、32 overlap 分块，每文件最多 32 块；问题 Top-5、每文件最多 3 块、总上下文最多 8,000 字符；无模型时关键词/全文降级。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "content-bounded",
+        "rag-bounded"
+      ]
+    },
+    {
+      "id": "llm-review",
+      "text": "LLM 主导摘要、关键词、建议分类、置信度、理由和内容不足 JSON；用户规则/手动分类优先，LLM 只能选已有分类；后台与手动分析均生成待确认建议，支持逐条/批量确认、拒绝、重试；扩展词为可删除建议词，修改后增量重建索引。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "review-safe"
+      ]
+    },
+    {
+      "id": "privacy-retention",
+      "text": "首次 AI 使用取得数据发送同意，可撤销；结果、扩展词、向量、错误和确认历史可管理；源文件删除/授权失效停止读取上传并保留状态；删除目录可选择停监控或清理索引；后台完成可选发送只含数量的本地通知，默认关闭；聊天只保留当前会话。",
+      "writeImpact": "required",
+      "acceptanceCriterionIds": [
+        "privacy-safe"
+      ]
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "ui-visible",
+      "text": "实机启动后智能页显示三类 AI 入口；未配置时不隐藏并说明原因；可进入聊天和配置页，配置成功无需重启即可用。",
+      "requirementIds": [
+        "ui-entry"
+      ],
+      "verificationTaskIds": [
+        "device-ui"
+      ]
+    },
+    {
+      "id": "llm-ready",
+      "text": "最小无文件测试请求能区分成功、鉴权、网络、超时和响应错误；密钥重启可恢复但始终遮罩，清除后不可用，日志无密钥。",
+      "requirementIds": [
+        "llm-service"
+      ],
+      "verificationTaskIds": [
+        "unit-llm",
+        "device-llm"
+      ]
+    },
+    {
+      "id": "data-unified",
+      "text": "新安装和旧库升级通过；迁移后首页、RAG、规则和确认看到同一文件状态；迁移失败不删旧数据、不阻塞启动。",
+      "requirementIds": [
+        "unified-files"
+      ],
+      "verificationTaskIds": [
+        "unit-data",
+        "device-e2e"
+      ]
+    },
+    {
+      "id": "directory-safe",
+      "text": "实机可授权自定义/快捷目录；目录 URI 保存；递归扫描发现子目录文件并去重；8 目录、1,000 文件、100 MB、失效 URI 边界有明确状态且不越权。",
+      "requirementIds": [
+        "directory-monitor"
+      ],
+      "verificationTaskIds": [
+        "unit-monitor",
+        "device-monitor"
+      ]
+    },
+    {
+      "id": "schedule-safe",
+      "text": "实机可观察充电、02:00–04:00、Wi-Fi、WorkScheduler、批次 20、成功去重、最多 3 次临时错误重试；结果进入待确认，前台补扫可恢复。",
+      "requirementIds": [
+        "scheduled-batch"
+      ],
+      "verificationTaskIds": [
+        "unit-scheduler",
+        "device-scheduler"
+      ]
+    },
+    {
+      "id": "embedding-real",
+      "text": "真实模型推理输出 512 维、L2 范数误差不超过 0.01、同文本余弦不低于 0.99；异步 NAPI 不阻塞 UI，batch 最大 32 且缓存有效；实机记录加载/推理/峰值内存；模型由 Git LFS 跟踪并推送。",
+      "requirementIds": [
+        "local-embedding"
+      ],
+      "verificationTaskIds": [
+        "unit-embedding",
+        "device-embedding",
+        "lfs-model",
+        "lint-build"
+      ]
+    },
+    {
+      "id": "content-bounded",
+      "text": "请求只含本地提取文本和必要元数据；每文件不超过前 20%/8,000 字符；OCR/解析失败不上传原始二进制；撤销同意后后台和手动上传均阻止。",
+      "requirementIds": [
+        "content-rag"
+      ],
+      "verificationTaskIds": [
+        "unit-content",
+        "device-llm",
+        "device-e2e"
+      ]
+    },
+    {
+      "id": "rag-bounded",
+      "text": "问答按规定分块和 Top-K 限制召回并显示引用；无本地模型时关键词/全文可用且提示模式；资料不足时不编造。",
+      "requirementIds": [
+        "content-rag"
+      ],
+      "verificationTaskIds": [
+        "unit-rag",
+        "device-llm",
+        "device-e2e"
+      ]
+    },
+    {
+      "id": "review-safe",
+      "text": "结构化 JSON 校验通过；规则/手动分类不可覆盖；未知分类不落地；摘要/关键词/建议/置信度可预览；确认、拒绝、重试和扩展词管理可持久化。",
+      "requirementIds": [
+        "llm-review"
+      ],
+      "verificationTaskIds": [
+        "unit-review",
+        "device-e2e"
+      ]
+    },
+    {
+      "id": "privacy-safe",
+      "text": "授权失效和源文件缺失不静默丢记录；清理操作有选择和二次确认；通知默认关闭且只显示数量；聊天重启清空；日志/测试无 API Key、正文、聊天内容。",
+      "requirementIds": [
+        "privacy-retention"
+      ],
+      "verificationTaskIds": [
+        "unit-privacy",
+        "device-ui",
+        "device-e2e"
+      ]
+    }
+  ],
+  "verificationTasks": [
+    {
+      "id": "unit-llm",
+      "miseTask": "test:unit:llm",
+      "purpose": "验证配置持久化、HUKS、测试连接、结构化响应和 LLM 错误降级。",
+      "acceptanceCriterionIds": [
+        "llm-ready"
+      ]
+    },
+    {
+      "id": "unit-data",
+      "miseTask": "test:unit:data",
+      "purpose": "验证数据库迁移、统一文件源、失效记录和派生数据生命周期。",
+      "acceptanceCriterionIds": [
+        "data-unified"
+      ]
+    },
+    {
+      "id": "unit-monitor",
+      "miseTask": "test:unit:monitor",
+      "purpose": "验证目录 URI、递归边界、去重和授权失效。",
+      "acceptanceCriterionIds": [
+        "directory-safe"
+      ]
+    },
+    {
+      "id": "unit-scheduler",
+      "miseTask": "test:unit:scheduler",
+      "purpose": "验证充电/时间/Wi-Fi 策略、02:00–04:00 窗口、批量上限和重试。",
+      "acceptanceCriterionIds": [
+        "schedule-safe"
+      ]
+    },
+    {
+      "id": "unit-embedding",
+      "miseTask": "test:unit:embedding",
+      "purpose": "验证 512 维、归一化、重复编码、batch/cache、缺失模型降级。",
+      "acceptanceCriterionIds": [
+        "embedding-real"
+      ]
+    },
+    {
+      "id": "unit-content",
+      "miseTask": "test:unit:content",
+      "purpose": "验证本地提取/OCR、20%/8,000 字符边界和撤销同意。",
+      "acceptanceCriterionIds": [
+        "content-bounded"
+      ]
+    },
+    {
+      "id": "unit-rag",
+      "miseTask": "test:unit:rag",
+      "purpose": "验证分块、Top-5、单文件 3 块、总计 8,000 字符和关键词降级。",
+      "acceptanceCriterionIds": [
+        "rag-bounded"
+      ]
+    },
+    {
+      "id": "unit-review",
+      "miseTask": "test:unit:review",
+      "purpose": "验证规则优先、已有分类、JSON 校验、待确认和扩展词管理。",
+      "acceptanceCriterionIds": [
+        "review-safe"
+      ]
+    },
+    {
+      "id": "unit-privacy",
+      "miseTask": "test:unit:privacy",
+      "purpose": "验证通知、聊天会话、敏感日志和删除/失效策略。",
+      "acceptanceCriterionIds": [
+        "privacy-safe"
+      ]
+    },
+    {
+      "id": "lint-build",
+      "miseTask": "check:build",
+      "purpose": "执行 ArkTS lint、HarmonyOS 构建并检查 NAPI、MindSpore Lite 和 rawfile 打包。",
+      "acceptanceCriterionIds": [
+        "embedding-real"
+      ]
+    },
+    {
+      "id": "lfs-model",
+      "miseTask": "check:lfs-model",
+      "purpose": "验证 `.ms` 由 Git LFS 跟踪、真实对象已推送、构建不使用 pointer，Tokenizer/config 成套。",
+      "acceptanceCriterionIds": [
+        "embedding-real"
+      ]
+    },
+    {
+      "id": "device-ui",
+      "miseTask": "verify:device:ui",
+      "purpose": "用 devecocli 验证智能页、聊天/配置/待确认/目录/通知 UI。",
+      "acceptanceCriterionIds": [
+        "ui-visible",
+        "privacy-safe"
+      ]
+    },
+    {
+      "id": "device-llm",
+      "miseTask": "verify:device:llm",
+      "purpose": "实机验证真实 Chat、文件分析、问答、网络错误和撤销同意，不记录密钥。",
+      "acceptanceCriterionIds": [
+        "llm-ready",
+        "content-bounded",
+        "rag-bounded"
+      ]
+    },
+    {
+      "id": "device-monitor",
+      "miseTask": "verify:device:monitor",
+      "purpose": "实机验证快捷/自定义目录授权、Watcher、递归补扫、去重、失效和首页展示。",
+      "acceptanceCriterionIds": [
+        "directory-safe"
+      ]
+    },
+    {
+      "id": "device-embedding",
+      "miseTask": "verify:device:embedding",
+      "purpose": "实机验证真实 BGE tokenizer/NAPI/MindSpore Lite 推理、维度、归一化、性能和索引。",
+      "acceptanceCriterionIds": [
+        "embedding-real"
+      ]
+    },
+    {
+      "id": "device-scheduler",
+      "miseTask": "verify:device:scheduler",
+      "purpose": "实机验证充电、时间窗、每日定时、Wi-Fi、WorkScheduler、批处理、通知和前台补扫。",
+      "acceptanceCriterionIds": [
+        "schedule-safe"
+      ]
+    },
+    {
+      "id": "device-e2e",
+      "miseTask": "verify:device:e2e",
+      "purpose": "验证迁移、授权、本地提取、Embedding、RAG、LLM、建议确认、拒绝、重试和清理完整链路。",
+      "acceptanceCriterionIds": [
+        "data-unified",
+        "content-bounded",
+        "rag-bounded",
+        "review-safe",
+        "privacy-safe"
+      ]
+    }
+  ],
+  "nonGoals": [
+    "不物理移动、复制、删除源文件，不绕过沙箱访问其他应用私有目录。",
+    "不实现永久常驻后台或精确唤醒保证。",
+    "不使用远程 Embedding API；Embedding 不负责生成答案，不替代 LLM。",
+    "不使用随机/Hash 向量冒充真实 Embedding。",
+    "不让 LLM 直接落地分类或覆盖用户规则/手动分类。",
+    "不持久化跨重启聊天记录，不上传原始二进制或完整文件。"
+  ],
+  "assumptions": [
+    "目标设备持续连接电脑；设备序列号由实机探测确定。",
+    "普通三方应用只能经系统文件夹选择器获得用户授权 URI，不能静默访问 QQ、微信、浏览器、夸克私有目录；Watcher 不保证进程被杀后持续运行，前台恢复补扫。",
+    "MindSpore Lite 运行时目标为 2.3.0；若设备 SDK 缺少兼容头文件、库或 ABI，本地向量验收阻塞，但 LLM 主流程保留规则/关键词降级。",
+    "用户提供的 BGE-Small-ZH v1.5 INT8 模型三件套许可允许远程仓库再分发；模型规格以 `MODEL_PORTING_REPORT.md` 为准。",
+    "系统 WorkScheduler 可能延迟、暂停或不触发；应用运行时策略校验和前台补扫保证安全，不承诺精确唤醒。",
+    "用户在实机中填写真实 OpenAI-compatible Chat 服务；API Key 不提供给 Agent、不进入仓库、测试或日志。"
+  ],
+  "stages": [
+    {
+      "id": "implement-and-verify",
+      "objective": "按 TDD 顺序补测试替身与失败测试，修复 UI/数据/LLM/RAG/本地模型/目录调度，再执行 lint、构建、Git LFS 和连接手机端到端验收；缺少 MindSpore Lite 运行时只阻塞本地向量验收，不阻塞 LLM 降级主流程。",
+      "requirementIds": [
+        "ui-entry",
+        "llm-service",
+        "unified-files",
+        "directory-monitor",
+        "scheduled-batch",
+        "local-embedding",
+        "content-rag",
+        "llm-review",
+        "privacy-retention"
+      ],
+      "acceptanceCriterionIds": [
+        "ui-visible",
+        "llm-ready",
+        "data-unified",
+        "directory-safe",
+        "schedule-safe",
+        "embedding-real",
+        "content-bounded",
+        "rag-bounded",
+        "review-safe",
+        "privacy-safe"
+      ],
+      "verificationTaskIds": [
+        "unit-llm",
+        "unit-data",
+        "unit-monitor",
+        "unit-scheduler",
+        "unit-embedding",
+        "unit-content",
+        "unit-rag",
+        "unit-review",
+        "unit-privacy",
+        "lint-build",
+        "lfs-model",
+        "device-ui",
+        "device-llm",
+        "device-monitor",
+        "device-embedding",
+        "device-scheduler",
+        "device-e2e"
+      ]
+    }
+  ],
+  "taskId": "tmp-handoff-shixu-file-manager-md-请你根据这个handoff工",
+  "request": "/tmp/handoff-shixu-file-manager.md,请你根据这个handoff工作报告，修复鸿蒙手机实机测试时，基于llm的RAG文件整理服务没有ui界面，无法使用llm的任何整理服务，请你修复，可以使用devecocli工具，我的手机全程连接在电脑上",
+  "environment": {
+    "miseConfigHash": "sha256:5271b1303ad1656dd0a0a2e0ef36dc16c1425196e3b0a02dc4b0b0154dcf0b1a"
+  },
+  "gitBaseline": {
+    "branch": "workflow/tmp-handoff-shixu-file-manager-md-请你根据这个handoff工",
+    "head": "0b332ec4fe4c7b776fb7548ff43a6c3dd54b395e",
+    "baseCommit": "cd23899df99308f3ea833e535235fa5fcf0bfbca",
+    "targetBranch": "test/rag-llm",
+    "targetHead": "cd23899df99308f3ea833e535235fa5fcf0bfbca"
+  },
+  "draftHash": "sha256:7e35c96c868f283c83161f8e94d605298063445b263555ac712c134a95f94d0b"
+}
