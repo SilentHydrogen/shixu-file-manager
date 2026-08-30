@@ -1,43 +1,57 @@
 {
-  "app": {
-    "signingConfigs": [],
-    "products": [
+  app: {
+    signingConfigs: [
       {
-        "name": "default",
-        "signingConfig": "default",
-        "targetSdkVersion": "6.1.0(23)",
-        "compatibleSdkVersion": "6.1.0(23)",
-        "runtimeOS": "HarmonyOS",
-        "buildOption": {
-          "nativeCompiler": "BiSheng",
-          "strictMode": {
-            "caseSensitiveCheck": true,
-            "useNormalizedOHMUrl": false
-          }
-        }
-      }
+        name: 'default',
+        type: 'HarmonyOS',
+        material: {
+          certpath: '/home/cmz488/.ohos/config/default_shixu-file-manager_tTXvMz6gBQfeCoyCMQNSHf4ORn0P7sxF8Zg4rOXong=.cer',
+          keyAlias: 'debugKey',
+          keyPassword: '0000001b35b8d7929ca4f31a5f5cdc52ee2fd5ce7691d07f5a81367a5f730aad1819d00aa7665c4017f45d',
+          profile: '/home/cmz488/.ohos/config/default_shixu-file-manager_tTXvMz6gBQfeCoyCMQNSHf4ORn0P7sxF8Zg4rOXong=.p7b',
+          signAlg: 'SHA256withECDSA',
+          storeFile: '/home/cmz488/.ohos/config/default_shixu-file-manager_tTXvMz6gBQfeCoyCMQNSHf4ORn0P7sxF8Zg4rOXong=.p12',
+          storePassword: '0000001b35b8d7929ca4f31a5f5cdc52ee2fd5ce7691d07f5a81367a5f730aad1819d00aa7665c4017f45d',
+        },
+      },
     ],
-    "buildModeSet": [
+    products: [
       {
-        "name": "debug",
+        name: 'default',
+        signingConfig: 'default',
+        targetSdkVersion: '6.1.0(23)',
+        compatibleSdkVersion: '6.1.0(23)',
+        runtimeOS: 'HarmonyOS',
+        buildOption: {
+          nativeCompiler: 'BiSheng',
+          strictMode: {
+            caseSensitiveCheck: true,
+            useNormalizedOHMUrl: false,
+          },
+        },
+      },
+    ],
+    buildModeSet: [
+      {
+        name: 'debug',
       },
       {
-        "name": "release"
-      }
-    ]
+        name: 'release',
+      },
+    ],
   },
-  "modules": [
+  modules: [
     {
-      "name": "entry",
-      "srcPath": "./entry",
-      "targets": [
+      name: 'entry',
+      srcPath: './entry',
+      targets: [
         {
-          "name": "default",
-          "applyToProducts": [
-            "default"
-          ]
-        }
-      ]
-    }
-  ]
+          name: 'default',
+          applyToProducts: [
+            'default',
+          ],
+        },
+      ],
+    },
+  ],
 }
