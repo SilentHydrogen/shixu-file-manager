@@ -1,66 +1,29 @@
-// entry/src/main/ets/ai/model/EmbeddingModel.ets
-
 /**
- * Embedding 模型（占位实现）
- * 实际实现需要 HarmonyOS ONNX Runtime 或远程 API
+ * Local BGE embedding adapter.
+ *
+ * Native MindSpore Lite wiring is intentionally exposed as an unavailable
+ * capability until the matching NAPI runtime is packaged. Never return fake
+ * vectors: callers must use their lexical fallback when this capability is off.
  */
 export class EmbeddingModel {
-  private isLoaded: boolean = false
-  private readonly EMBEDDING_DIM = 384
+  static readonly EMBEDDING_DIM: number = 512
+  private loaded: boolean = false
 
-  /**
-   * 加载模型
-   */
   async loadModel(): Promise<void> {
-    // 占位实现 - 实际需要加载 ONNX 模型
-    console.log('EmbeddingModel: Using placeholder implementation')
-    this.isLoaded = true
+    throw new Error('Local BGE model runtime is unavailable')
   }
 
-  /**
-   * 编码文本为向量
-   * 占位实现：返回随机归一化向量
-   */
   async encode(text: string): Promise<number[]> {
-    if (!this.isLoaded) {
-      await this.loadModel()
-    }
-
-    // 占位实现：生成随机归一化向量
-    const vector: number[] = []
-    let sumSquares = 0
-
-    // 生成随机向量
-    for (let i = 0; i < this.EMBEDDING_DIM; i++) {
-      const value = Math.random() * 2 - 1 // [-1, 1]
-      vector.push(value)
-      sumSquares += value * value
-    }
-
-    // L2 归一化
-    const norm = Math.sqrt(sumSquares)
-    for (let i = 0; i < this.EMBEDDING_DIM; i++) {
-      vector[i] /= norm
-    }
-
-    return vector
+    if (!this.loaded) await this.loadModel()
+    return []
   }
 
-  /**
-   * 批量编码
-   */
   async encodeBatch(texts: string[]): Promise<number[][]> {
-    const embeddings: number[][] = []
-    for (const text of texts) {
-      embeddings.push(await this.encode(text))
-    }
-    return embeddings
+    if (texts.length === 0) return []
+    if (!this.loaded) await this.loadModel()
+    return []
   }
 
-  /**
-   * 获取向量维度
-   */
-  getDimension(): number {
-    return this.EMBEDDING_DIM
-  }
+  isAvailable(): boolean { return this.loaded }
+  getDimension(): number { return EmbeddingModel.EMBEDDING_DIM }
 }

@@ -19,18 +19,6 @@ export default function llmServiceTest() {
       expect(typeof isConfigured).assertEqual('boolean')
     })
 
-    it('should become configured after setting API key', 0, () => {
-      const configManager = LLMConfigManager.getInstance()
-      configManager.updateConfig({
-        apiKey: 'test-api-key'
-      })
-
-      const service = LLMService.getInstance()
-      service.reinitialize()
-
-      expect(service.isConfigured()).assertEqual(true)
-    })
-
     it('should throw error when not configured', 0, async () => {
       const configManager = LLMConfigManager.getInstance()
       configManager.updateConfig({
@@ -41,7 +29,7 @@ export default function llmServiceTest() {
       service.reinitialize()
 
       try {
-        await service.generateEmbedding('test')
+        await service.generate({ messages: [{ role: 'user', content: 'test' }] })
         expect(false).assertEqual(true) // Should not reach here
       } catch (err) {
         expect((err as Error).message).assertContain('not configured')

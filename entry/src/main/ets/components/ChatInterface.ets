@@ -1,13 +1,17 @@
 // entry/src/main/ets/components/ChatInterface.ets
 
 import { RagAnalysisService } from '../service/RagAnalysisService'
-import { QAResult } from '../llm/LLMTypes'
+import { QAResult, RelevantFile } from '../llm/LLMTypes'
 
+interface RelevantFileRef {
+  fileName: string
+  similarity: number
+}
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: number
-  relevantFiles?: Array<{ fileName: string, similarity: number }>
+  relevantFiles?: RelevantFileRef[]
 }
 
 @Component
@@ -124,7 +128,7 @@ export struct ChatInterface {
                   .fontColor('#666666')
                   .margin({ top: 8 })
 
-                ForEach(message.relevantFiles, (file: { fileName: string, similarity: number }) => {
+                ForEach(message.relevantFiles, (file: RelevantFileRef) => {
                   Row() {
                     Text(`📄 ${file.fileName}`)
                       .fontSize(12)
@@ -188,10 +192,13 @@ export struct ChatInterface {
         role: 'assistant',
         content: result.answer,
         timestamp: Date.now(),
-        relevantFiles: result.relevantFiles.map(f => ({
-          fileName: f.fileName,
-          similarity: f.similarity
-        }))
+        relevantFiles: result.relevantFiles.map((f: RelevantFile): RelevantFileRef => {
+          const ref: RelevantFileRef = {
+            fileName: f.fileName,
+            similarity: f.similarity
+          }
+          return ref
+        })
       }
 
       this.messages.push(assistantMessage)

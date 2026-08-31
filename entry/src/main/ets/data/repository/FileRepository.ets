@@ -65,6 +65,26 @@ export class FileRepository {
   }
 
   /**
+   * 查询文件列表，供首页迁移和关键词检索使用。
+   */
+  async findAll(limit: number = 1000): Promise<FileInfo[]> {
+    const store = await this.getStore()
+    const predicates = new relationalStore.RdbPredicates(DatabaseConfig.TABLE_FILES)
+    predicates.orderByDesc('modified_time')
+    predicates.limitAs(limit)
+    const resultSet = await store.query(predicates)
+    const files: FileInfo[] = []
+    try {
+      while (resultSet.goToNextRow()) {
+        files.push(FileInfo.fromRow(this.resultSetToObject(resultSet)))
+      }
+      return files
+    } finally {
+      resultSet.close()
+    }
+  }
+
+  /**
    * 标记文件为已处理
    */
   async markAsProcessed(fileId: number): Promise<void> {

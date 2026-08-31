@@ -4,6 +4,7 @@ export class DatabaseSchema {
    */
   static getCreateTableSQLs(): string[] {
     return [
+      DatabaseSchema.createSchemaMetaTable(),
       DatabaseSchema.createFilesTable(),
       DatabaseSchema.createCollectionsTable(),
       DatabaseSchema.createFileCollectionRefsTable(),
@@ -11,6 +12,15 @@ export class DatabaseSchema {
       DatabaseSchema.createRagAnalysisLogsTable(),
       DatabaseSchema.createFileEmbeddingsTable()
     ]
+  }
+
+  private static createSchemaMetaTable(): string {
+    return `
+      CREATE TABLE IF NOT EXISTS schema_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `
   }
 
   private static createFilesTable(): string {

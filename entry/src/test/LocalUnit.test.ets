@@ -11,6 +11,12 @@ import ragAnalysisServiceTest from './ets/service/RagAnalysisServiceTest';
 import promptTemplatesTest from './ets/llm/PromptTemplatesTest';
 import llmConfigTest from './ets/llm/LLMConfigTest';
 import llmServiceTest from './ets/llm/LLMServiceTest';
+import ragTextUtilsTest from './ets/llm/RagTextUtilsTest';
+import llmResponseParserTest from './ets/llm/LLMResponseParserTest';
+import servicePolicyTest from './ets/service/ServicePolicyTest';
+import reviewSuggestionServiceTest from './ets/service/ReviewSuggestionServiceTest';
+import privacyConsentManagerTest from './ets/service/PrivacyConsentManagerTest';
+import embeddingModelTest from './ets/ai/EmbeddingModelTest';
 
 export default function localUnitTest() {
   databaseManagerTest();
@@ -27,6 +33,12 @@ export default function localUnitTest() {
   promptTemplatesTest();
   llmConfigTest();
   llmServiceTest();
+  ragTextUtilsTest();
+  llmResponseParserTest();
+  servicePolicyTest();
+  reviewSuggestionServiceTest();
+  privacyConsentManagerTest();
+  embeddingModelTest();
 
   describe('localUnitTest', () => {
     // Defines a test suite. Two parameters are supported: test suite name and test suite function.

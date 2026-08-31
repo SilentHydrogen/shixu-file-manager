@@ -2,6 +2,8 @@ import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { DatabaseManager } from '../data/database/DatabaseManager';
+import { LLMConfigManager } from '../llm/LLMConfig';
+import { PrivacyConsentManager } from '../service/PrivacyConsentManager';
 
 const DOMAIN = 0x0000;
 
@@ -23,6 +25,15 @@ export default class EntryAbility extends UIAbility {
 
     AppStorage.setOrCreate('pendingSharedUris', '');
     AppStorage.setOrCreate('pendingCardRoute', '');
+    AppStorage.setOrCreate('llmConfigured', false);
+    await PrivacyConsentManager.getInstance().load(this.context).catch((error: Error) => {
+      hilog.warn(DOMAIN, 'testTag', 'Privacy settings load failed: %{public}s', JSON.stringify(error));
+    });
+    await LLMConfigManager.getInstance().load(this.context).then(() => {
+      AppStorage.setOrCreate('llmConfigured', LLMConfigManager.getInstance().isConfigured());
+    }).catch((error: Error) => {
+      hilog.warn(DOMAIN, 'testTag', 'LLM config load failed: %{public}s', JSON.stringify(error));
+    });
     this.receiveSharedFiles(want);
     this.routeFromCard(want);
   }

@@ -1,7 +1,7 @@
 export class DatabaseConfig {
   static readonly DB_NAME: string = 'shixu_rag.db'
-  static readonly DB_VERSION: number = 1
-  static readonly VECTOR_DIMENSION: number = 384
+  static readonly DB_VERSION: number = 2
+  static readonly VECTOR_DIMENSION: number = 512
 
   static readonly TABLE_FILES: string = 'files'
   static readonly TABLE_COLLECTIONS: string = 'collections'

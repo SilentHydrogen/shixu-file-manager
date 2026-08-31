@@ -4,6 +4,7 @@ import preferences from '@ohos.data.preferences';
 import zlib from '@ohos.zlib';
 import curves from '@ohos.curves';
 import { common } from '@kit.AbilityKit';
+import router from '@ohos.router';
 import { image } from '@kit.ImageKit';
 import { textRecognition } from '@kit.CoreVisionKit';
 import { pdfService } from '@kit.PDFKit';
@@ -102,6 +103,7 @@ struct Index {
   @State lastManualConfirmedCount: number = 0;
   @State pendingManualConfirmIds: number[] = [];
   @State isIndexing: boolean = false;
+  @StorageLink('llmConfigured') llmConfigured: boolean = false;
   @State pressedFileId: number = 0;
   @State sortingRuleId: number = 0;
   @State files: FileItem[] = [];
@@ -269,6 +271,7 @@ struct Index {
       return savedFile;
     });
     try {
+      AppStorage.setOrCreate('fileBoxFiles', JSON.stringify(savedFiles));
       this.preferenceStore.putSync('files', JSON.stringify(savedFiles));
       this.preferenceStore.putSync('rules', JSON.stringify(this.rules));
       this.preferenceStore.putSync('categories', JSON.stringify(this.categories));
@@ -2125,6 +2128,33 @@ struct Index {
           .borderRadius(22)
           .margin({ left: 20, right: 20, bottom: 22 })
           .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+          Row({ space: 8 }) {
+            Button('AI 整理')
+              .fontSize(12)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.accent_primary'))
+              .borderRadius(12)
+              .onClick(() => router.pushUrl({ url: 'pages/AIOrganizePage' }))
+            Button('文件问答')
+              .fontSize(12)
+              .fontColor($r('app.color.accent_blue'))
+              .backgroundColor('#E9F0FF')
+              .borderRadius(12)
+              .onClick(() => router.pushUrl({ url: 'pages/ChatPage' }))
+            Button('LLM 配置')
+              .fontSize(12)
+              .fontColor($r('app.color.accent_blue'))
+              .backgroundColor('#E9F0FF')
+              .borderRadius(12)
+              .onClick(() => router.pushUrl({ url: 'pages/LLMConfigPage' }))
+          }
+          .width('100%')
+          .margin({ left: 20, right: 20, bottom: 18 })
+          Text(this.llmConfigured ? 'LLM 已配置，可使用 AI 服务' : 'LLM 未配置：点击“LLM 配置”开始')
+            .fontSize(12)
+            .fontColor(this.llmConfigured ? $r('app.color.accent_green') : $r('app.color.text_caption'))
+            .alignSelf(ItemAlign.Start)
+            .margin({ left: 22, bottom: 18 })
           Text('你的使用方式')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
