@@ -1,5 +1,7 @@
 // entry/src/main/ets/llm/PromptTemplates.ets
 
+import { RelevantContext } from './LLMTypes'
+
 /**
  * 提示词模板管理
  */
@@ -51,11 +53,26 @@ ${content.substring(0, 500)}
   }
 
   /**
+   * 结构化文件分析提示词。
+   */
+  static analyzeFile(fileName: string, fileType: string, content: string, categories: string[]): string {
+    const categoryText: string = categories.join('、')
+    return `请分析文件并严格只返回 JSON，不要 Markdown：
+{"summary":"不超过200字的摘要","keywords":["3-5个关键词"],"suggestedCategory":"必须从可选分类选择","confidence":0.0,"reason":"分类理由","insufficientContent":false}
+文件名：${fileName}
+文件类型：${fileType}
+可选分类：${categoryText}
+本地提取内容（仅片段）：
+${content.substring(0, 8000)}
+若内容不足，设置 insufficientContent=true；未知分类只能返回“待整理”。`
+  }
+
+  /**
    * RAG 问答提示词
    */
-  static ragQA(question: string, relevantFiles: Array<{ name: string, content: string }>): string {
+  static ragQA(question: string, relevantFiles: RelevantContext[]): string {
     const filesContext = relevantFiles
-      .map((file, index) => `文件${index + 1}：${file.name}\n内容：${file.content.substring(0, 500)}`)
+      .map((file, index) => `文件${index + 1}：${file.name}\n内容：${file.content.substring(0, 1600)}`)
       .join('\n\n')
 
     return `你是一个智能文件管理助手。请基于以下相关文件内容回答用户的问题。

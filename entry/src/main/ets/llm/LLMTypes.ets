@@ -53,6 +53,10 @@ export interface FileAnalysisResult {
   summary: string
   keywords: string[]
   category: string
+  suggestedCategory?: string
+  confidence?: number
+  reason?: string
+  insufficientContent?: boolean
   sentiment?: string
 }
 
@@ -73,4 +77,13 @@ export interface RelevantFile {
   fileName: string
   similarity: number
   snippet: string
+  chunkIndex?: number
+}
+
+/**
+ * 传给 LLM 的相关文件内容片段
+ */
+export interface RelevantContext {
+  name: string
+  content: string
 }

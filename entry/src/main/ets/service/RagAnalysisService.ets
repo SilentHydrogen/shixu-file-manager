@@ -8,8 +8,35 @@ import { EmbeddingModel } from '../ai/model/EmbeddingModel'
 import { FileProcessingQueue } from './FileProcessingQueue'
 import { FileInfo } from '../data/model/FileInfo'
 import { LLMService } from '../llm/LLMService'
-import { FileAnalysisResult, QAResult, RelevantFile } from '../llm/LLMTypes'
+import { FileAnalysisResult, QAResult, RelevantFile, RelevantContext } from '../llm/LLMTypes'
 import fs from '@ohos.file.fs'
+
+function decodeUtf8(value: Uint8Array): string {
+  let result: string = ''
+  let index: number = 0
+  while (index < value.length) {
+    const first: number = value[index]
+    if (first < 0x80) {
+      result += String.fromCharCode(first)
+      index += 1
+    } else if (first < 0xe0) {
+      const code: number = ((first & 0x1f) << 6) | (value[index + 1] & 0x3f)
+      result += String.fromCharCode(code)
+      index += 2
+    } else if (first < 0xf0) {
+      const code: number = ((first & 0x0f) << 12) | ((value[index + 1] & 0x3f) << 6) | (value[index + 2] & 0x3f)
+      result += String.fromCharCode(code)
+      index += 3
+    } else {
+      const code: number = ((first & 0x07) << 18) | ((value[index + 1] & 0x3f) << 12) | ((value[index + 2] & 0x3f) << 6) |
+        (value[index + 3] & 0x3f)
+      const base: number = code - 0x10000
+      result += String.fromCharCode(0xd800 + (base >> 10), 0xdc00 + (base & 0x3ff))
+      index += 4
+    }
+  }
+  return result
+}
 
 export interface SearchResult {
   file: FileInfo
@@ -146,7 +173,7 @@ export class RagAnalysisService {
 
     // 2. 读取文件内容
     const relevantFiles: RelevantFile[] = []
-    const filesForLLM: Array<{ name: string, content: string }> = []
+    const filesForLLM: RelevantContext[] = []
 
     for (const result of searchResults) {
       try {
@@ -257,21 +284,9 @@ export class RagAnalysisService {
   }
 
   /**
-   * 生成 embedding 向量
+   * 生成 embedding 向量（使用本地模型）
    */
   private async generateEmbedding(file: FileInfo): Promise<number[]> {
-    // 优先使用 LLM 服务生成 embedding
-    if (this.llmService.isConfigured()) {
-      try {
-        const content = await this.readFileContent(file.path)
-        const text = `${file.name} ${content.substring(0, 1000)}`
-        return await this.llmService.generateEmbedding(text)
-      } catch (err) {
-        console.error('LLM embedding failed, fallback to local model:', JSON.stringify(err))
-      }
-    }
-
-    // 降级使用本地模型
     const text = `${file.name} ${file.contentSummary || ''}`
     return await this.embeddingModel.encode(text)
   }
@@ -287,8 +302,7 @@ export class RagAnalysisService {
       fs.closeSync(file)
 
       const uint8Array = new Uint8Array(buffer, 0, readLen)
-      const decoder = new TextDecoder('utf-8')
-      return decoder.decode(uint8Array)
+      return decodeUtf8(uint8Array)
     } catch (err) {
       console.error(`Failed to read file ${path}:`, JSON.stringify(err))
       return ''
