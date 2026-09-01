@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260830-ui-refactor",
+  "taskId": null,
+  "sessionId": "session-20260830-ui-refactor",
+  "status": "approved_with_notes",
+  "whatChanged": "新增独立移动端 Web 原型；更新 HarmonyOS 颜色/尺寸资源；新增 Icon 组件和一组 24x24 SVG 线性图标；在 Index.ets 中将底部导航、分类卡片、文件行、弹层关闭和状态提示迁移到资源图标。",
+  "why": "建立拾序安静、可信、克制的低饱和视觉语言，消除字符图标带来的风格不一致，并为后续页面拆分和动效改造提供稳定基础。",
+  "risk": "Index.ets 仍是大型单文件，部分旧业务样式仍存在硬编码颜色；当前仅完成构建验证，尚未完成设备尺寸和视觉截图回归。",
+  "validation": [
+    "color.json 和 float.json 可被 JSON 解析",
+    "git diff --check 通过",
+    "Hvigor assembleHap 构建成功（存在既有 ArkTS 弃用/异常处理警告）",
+    "Index.ets 中未检出计划禁止的字符图标模式"
+  ],
+  "followUps": [
+    "在 390vp、412vp 和平板设备上截图检查布局",
+    "继续将 Index.ets 中剩余硬编码颜色迁移到资源 Token",
+    "按页面拆分共享 Header、FileRow、底部导航和面板组件"
+  ],
+  "changedFiles": [
+    "prototype/index.html",
+    "entry/src/main/ets/components/Icon.ets",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/resources/base/element/color.json",
+    "entry/src/main/resources/base/element/float.json",
+    "entry/src/main/resources/base/media/icon_*.svg"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-30T00:00:00+08:00"
+}

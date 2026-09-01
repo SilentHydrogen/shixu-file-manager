@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-theme-switch",
+  "taskId": null,
+  "sessionId": "session-20260831-theme-switch",
+  "status": "approved_with_notes",
+  "whatChanged": "默认色板改为青绿色高明度体系；首页增加主题驱动线性渐变；设置页增加青绿、珊瑚、紫罗兰皮肤切换；主题选择保存到 Preferences；Web 原型同步支持三套主题。",
+  "why": "回应参考图的高明度单主色、白色内容层和简洁视觉语言，降低原先灰色层叠造成的浑浊感。",
+  "risk": "部分历史分类数据仍保存旧颜色值，老数据在分类卡片上可能暂时保留旧色；设备视觉验收尚未完成。",
+  "validation": [
+    "color.json 可被 JSON 解析",
+    "git diff --check 通过",
+    "Hvigor assembleHap 构建成功（仅有既有弃用和异常处理警告）"
+  ],
+  "followUps": [
+    "设备上验证主题切换、重启后的主题恢复和底部导航对比度",
+    "必要时在加载历史分类时按主题重新映射 category.color"
+  ],
+  "changedFiles": [
+    "prototype/index.html",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/resources/base/element/color.json"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T00:00:00+08:00"
+}

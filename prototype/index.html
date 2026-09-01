@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>拾序 · 视觉原型</title>
+  <style>
+    :root {
+      --page-bg: #f6f9f8;
+      --surface: #ffffff;
+      --surface-muted: #eef5f2;
+      --text-primary: #18252a;
+      --text-body: #66737a;
+      --text-caption: #98a3a6;
+      --accent-blue-gray: #4d93a3;
+      --accent-mauve: #7b6bc7;
+      --accent-sage: #00b887;
+      --accent-clay: #d38a62;
+      --accent-blue-green: #4aa7b5;
+      --action-dark: #00b887;
+      --tint-cream: #fff2e8;
+      --hairline: rgba(48, 52, 61, .08);
+      --radius-card: 18px;
+      --radius-header: 26px;
+      --radius-control: 12px;
+      --page-padding: 22px;
+      --nav-height: 82px;
+      --shadow-soft: 0 14px 34px rgba(48, 52, 61, .07);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--page-bg);
+      color: var(--text-primary);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .app { width: min(100%, 480px); min-height: 100vh; margin: 0 auto; padding-bottom: calc(var(--nav-height) + 18px); }
+    .page { display: none; padding: var(--page-padding); animation: page-in .22s ease both; }
+    .page.active { display: block; }
+    @keyframes page-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .hero {
+      min-height: 224px;
+      padding: 24px 22px 22px;
+      border-radius: 0 0 var(--radius-header) var(--radius-header);
+      background: linear-gradient(140deg, #00a78a 0%, #23b99e 58%, #59d2bc 100%);
+      color: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+    .eyebrow { margin: 0 0 22px; color: rgba(255,255,255,.72); font-size: 12px; letter-spacing: .08em; }
+    .hero h1 { margin: 0; font-size: clamp(28px, 8vw, 32px); line-height: 1.12; letter-spacing: -.035em; font-weight: 650; }
+    .hero p { margin: 10px 0 24px; color: rgba(255,255,255,.8); font-size: 14px; }
+    .hero-actions { display: flex; gap: 10px; }
+    .button {
+      min-height: 44px;
+      border: 0;
+      border-radius: var(--radius-control);
+      padding: 0 16px;
+      color: #fff;
+      background: var(--action-dark);
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    .button:active { transform: scale(.97); }
+    .button.secondary { color: var(--text-primary); background: rgba(255,255,255,.72); }
+    .hero .button { color: var(--action-dark); background: #ffffff; }
+
+    .section-heading { display: flex; align-items: end; justify-content: space-between; margin: 26px 0 12px; }
+    .section-heading h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+    .section-heading span { color: var(--text-caption); font-size: 12px; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { border: 1px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-soft); }
+    .stat { min-height: 126px; padding: 16px; }
+    .stat .label { color: var(--text-body); font-size: 13px; }
+    .stat strong { display: block; margin-top: 11px; font-size: 32px; line-height: 1; letter-spacing: -.05em; }
+    .stat small { display: block; margin-top: 11px; color: var(--text-caption); font-size: 12px; }
+    .progress-ring { width: 54px; height: 54px; float: right; transform: rotate(-90deg); }
+    .progress-ring circle { fill: none; stroke-width: 4; }
+    .progress-ring .track { stroke: var(--surface-muted); }
+    .progress-ring .value { stroke: var(--accent-sage); stroke-linecap: round; stroke-dasharray: 132; stroke-dashoffset: 34; }
+
+    .file-list { overflow: hidden; }
+    .file-row { display: flex; align-items: center; gap: 12px; padding: 14px 15px; border-bottom: 1px solid var(--hairline); }
+    .file-row:last-child { border-bottom: 0; }
+    .file-icon, .category-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 13px; color: var(--action-dark); }
+    .file-icon { background: #e8eef1; }
+    .file-icon.sage { background: #e6eee9; }
+    .file-icon.clay { background: #f1e6e1; }
+    .file-icon svg, .category-icon svg { width: 21px; height: 21px; }
+    .file-meta { min-width: 0; flex: 1; }
+    .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .file-sub { margin-top: 4px; color: var(--text-caption); font-size: 12px; }
+    .file-time { color: var(--text-caption); font-size: 11px; }
+
+    .notice { display: flex; align-items: center; gap: 12px; padding: 15px; background: #f2e7e2; }
+    .notice svg { flex: 0 0 20px; color: var(--accent-clay); }
+    .notice p { margin: 0; color: #7f6258; font-size: 13px; line-height: 1.45; }
+    .notice button { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; border-radius: 12px; color: #fff; background: var(--accent-clay); }
+
+    .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .category { padding: 15px; min-height: 134px; }
+    .category-icon { margin-bottom: 18px; }
+    .category h3 { margin: 0; font-size: 15px; }
+    .category p { margin: 6px 0 0; color: var(--text-caption); font-size: 12px; }
+    .category .count { margin-top: 14px; color: var(--text-body); font-size: 12px; }
+    .category.blue .category-icon { background: #e6edf3; color: var(--accent-blue-gray); }
+    .category.mauve .category-icon { background: #ede8ef; color: var(--accent-mauve); }
+    .category.sage .category-icon { background: #e7eee9; color: var(--accent-sage); }
+    .category.clay .category-icon { background: #f2e7e2; color: var(--accent-clay); }
+
+    .smart-hero { padding: 18px; background: #e8edeb; }
+    .smart-hero h2 { margin: 0; font-size: 20px; }
+    .smart-hero p { margin: 8px 0 16px; color: var(--text-body); font-size: 13px; line-height: 1.5; }
+    .segmented { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+    .segmented button { min-height: 38px; border: 0; border-radius: 999px; padding: 0 13px; color: var(--text-body); background: var(--surface); white-space: nowrap; }
+    .segmented button.active { color: #fff; background: var(--action-dark); }
+    .rule { display: flex; align-items: center; gap: 12px; padding: 15px; }
+    .rule + .rule { border-top: 1px solid var(--hairline); }
+    .rule .rule-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: #ebe5ee; color: var(--accent-mauve); }
+    .rule strong { display: block; font-size: 14px; }
+    .rule span { display: block; margin-top: 4px; color: var(--text-caption); font-size: 12px; }
+    .switch { margin-left: auto; width: 42px; height: 26px; border: 0; border-radius: 99px; background: #d3d6d5; }
+    .switch::after { content: ""; display: block; width: 20px; height: 20px; margin: 3px; border-radius: 50%; background: #fff; transition: transform .18s ease; }
+    .switch.on { background: var(--accent-sage); }
+    .switch.on::after { transform: translateX(16px); }
+
+    .settings-group { margin-bottom: 18px; }
+    .settings-group h3 { margin: 0 0 8px 4px; color: var(--text-caption); font-size: 12px; font-weight: 500; }
+    .setting { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 10px 15px; }
+    .setting + .setting { border-top: 1px solid var(--hairline); }
+    .setting-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--surface-muted); color: var(--action-dark); }
+    .setting-icon svg { width: 18px; height: 18px; }
+    .setting-copy { flex: 1; }
+    .setting-copy strong { display: block; font-size: 14px; font-weight: 600; }
+    .setting-copy span { display: block; margin-top: 3px; color: var(--text-caption); font-size: 12px; }
+    .setting-value { color: var(--text-caption); font-size: 12px; }
+
+    .bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 10; display: flex; justify-content: center; padding: 10px 14px max(10px, env(safe-area-inset-bottom)); background: rgba(243,241,240,.86); backdrop-filter: blur(18px); }
+    .nav-inner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; width: min(100%, 480px); min-height: 62px; padding: 5px; border: 1px solid rgba(48,52,61,.08); border-radius: 23px; background: rgba(255,253,252,.92); box-shadow: var(--shadow-soft); }
+    .nav-item { display: grid; place-items: center; gap: 3px; border: 0; border-radius: 17px; color: var(--text-caption); background: transparent; font-size: 10px; }
+    .nav-item svg { width: 20px; height: 20px; }
+    .nav-item.active { color: var(--action-dark); background: #edf0ed; }
+    .nav-item.add { color: #fff; background: var(--action-dark); }
+    .nav-item.add svg { width: 22px; height: 22px; }
+
+    .sheet-backdrop { position: fixed; inset: 0; z-index: 20; display: none; align-items: end; background: rgba(48,52,61,.25); }
+    .sheet-backdrop.open { display: flex; }
+    .sheet { width: min(100%, 480px); margin: 0 auto; padding: 18px 22px calc(22px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; background: var(--surface); animation: sheet-in .22s ease both; }
+    @keyframes sheet-in { from { transform: translateY(24px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+    .sheet-handle { width: 34px; height: 4px; margin: 0 auto 18px; border-radius: 99px; background: var(--surface-muted); }
+    .sheet h2 { margin: 0; font-size: 20px; }
+    .sheet p { margin: 8px 0 18px; color: var(--text-body); font-size: 13px; }
+    .sheet-actions { display: grid; gap: 10px; }
+    .sheet-actions .button { width: 100%; }
+
+    @media (min-width: 481px) {
+      body { padding: 24px 0; }
+      .app { border-radius: 30px; overflow: hidden; box-shadow: 0 16px 50px rgba(48,52,61,.12); }
+      .bottom-nav { position: static; padding: 10px 22px 22px; }
+      .nav-inner { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute">
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 7.5h16v11H4zM3 4.5h18v3H3zM9 12h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 6.5h6l2 2h9v9.5h-17z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wand" viewBox="0 0 24 24"><path d="m14 4 6 6M4 20l8.5-8.5M6 4v3M4.5 5.5h3M18 15v3M16.5 16.5h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m19 13.2 1.2 1-.2 2-1.6 1-1.7-.7a7.7 7.7 0 0 1-1.5.9L15 19.2l-2 .5-1.4-1.2-.2-1.7a7.7 7.7 0 0 1-1.5-.9l-1.7.7-1.6-1-.2-2 1.2-1.1a7.5 7.5 0 0 1 0-1.8L4.4 9.6l.2-2 1.6-1 1.7.7a7.7 7.7 0 0 1 1.5-.9l.2-1.7 2-.5L13 5.4l.2 1.7a7.7 7.7 0 0 1 1.5.9l1.7-.7 1.6 1 .2 2-1.2 1.1a7.5 7.5 0 0 1 0 1.8Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 4 8 15H4zM12 9v4M12 16.5v.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <main class="app">
+    <section class="page active" data-page="home">
+      <header class="hero">
+        <p class="eyebrow">SHIXU · PERSONAL FILE SPACE</p>
+        <h1>让每个文件，<br />都有自己的位置</h1>
+        <p>安静地收纳，清晰地整理。</p>
+        <div class="hero-actions"><button class="button" data-open-sheet>添加文件</button><button class="button secondary" data-page-link="smart">查看规则</button></div>
+      </header>
+      <div class="section-heading"><h2>本月概览</h2><span>2026 年 8 月</span></div>
+      <div class="stats">
+        <article class="card stat"><svg class="progress-ring" viewBox="0 0 54 54"><circle class="track" cx="27" cy="27" r="21"/><circle class="value" cx="27" cy="27" r="21"/></svg><span class="label">已收纳</span><strong>24</strong><small>较上月多 8 项</small></article>
+        <article class="card stat"><span class="label">待整理</span><strong style="color:var(--accent-clay)">6</strong><small>建议今天处理</small></article>
+      </div>
+      <div class="section-heading"><h2>最近文件</h2><span>全部 30 项</span></div>
+      <div class="card file-list">
+        <div class="file-row"><span class="file-icon"><svg><use href="#i-file"/></svg></span><div class="file-meta"><div class="file-name">拾序产品说明.pdf</div><div class="file-sub">PDF · 2.4 MB · 工作</div></div><span class="file-time">刚刚</span></div>
+        <div class="file-row"><span class="file-icon sage"><svg><use href="#i-file"/></svg></span><div class="file-meta"><div class="file-name">青岛拍摄清单.txt</div><div class="file-sub">文本 · 18 KB · 灵感</div></div><span class="file-time">昨天</span></div>
+        <div class="file-row"><span class="file-icon clay"><svg><use href="#i-file"/></svg></span><div class="file-meta"><div class="file-name">未命名会议记录.docx</div><div class="file-sub">文档 · 860 KB · 待整理</div></div><span class="file-time">周一</span></div>
+      </div>
+      <div class="section-heading"><h2>需要你确认</h2><span>6 项</span></div>
+      <div class="card notice"><svg><use href="#i-alert"/></svg><p>有一些文件暂时无法判断分类，确认后规则会更准确。</p><button data-page-link="categories">处理</button></div>
+    </section>
+
+    <section class="page" data-page="categories">
+      <div class="section-heading" style="margin-top:2px"><div><h2 style="font-size:28px">分类</h2><span>按标签找到你要的文件</span></div><span>30 项</span></div>
+      <div class="category-grid">
+        <article class="card category blue"><div class="category-icon"><svg><use href="#i-archive"/></svg></div><h3>工作</h3><p>项目、会议与交付</p><div class="count">12 项</div></article>
+        <article class="card category mauve"><div class="category-icon"><svg><use href="#i-folder"/></svg></div><h3>项目</h3><p>长期事项与资料</p><div class="count">8 项</div></article>
+        <article class="card category sage"><div class="category-icon"><svg><use href="#i-wand"/></svg></div><h3>灵感</h3><p>值得留下的想法</p><div class="count">4 项</div></article>
+        <article class="card category clay"><div class="category-icon"><svg><use href="#i-alert"/></svg></div><h3>待整理</h3><p>等待你的确认</p><div class="count">6 项</div></article>
+      </div>
+      <div class="section-heading"><h2>自定义分类</h2><button class="button" style="min-height:40px;padding:0 13px" data-open-sheet><svg style="width:16px;height:16px;vertical-align:-3px"><use href="#i-plus"/></svg> 新建</button></div>
+      <div class="card" style="padding:18px;color:var(--text-caption);font-size:13px;line-height:1.5">分类会根据文件名、类型、内容关键词和使用场景自动建议。你可以随时调整。</div>
+    </section>
+
+    <section class="page" data-page="smart">
+      <div class="section-heading" style="margin-top:2px"><div><h2 style="font-size:28px">智能整理</h2><span>把重复整理交给规则</span></div><svg style="width:24px;height:24px;color:var(--accent-mauve)"><use href="#i-wand"/></svg></div>
+      <div class="card smart-hero"><h2>按当前规则整理 30 个文件</h2><p>规则会同时参考文件名、格式、内容关键词和使用场景。无法判断的文件会保留给你确认。</p><button class="button" data-toast>运行智能整理</button></div>
+      <div class="section-heading"><h2>你的使用方式</h2><span>影响默认规则</span></div>
+      <div class="segmented" data-segmented><button class="active">通用</button><button>学生</button><button>摄影师</button><button>程序员</button></div>
+      <div class="section-heading"><h2>整理规则</h2><span>3 条规则</span></div>
+      <div class="card"><div class="rule"><span class="rule-icon"><svg><use href="#i-file"/></svg></span><div><strong>工作文件</strong><span>文件名包含“项目 / 会议” → 工作</span></div><button class="switch on" aria-label="启用工作文件规则"></button></div><div class="rule"><span class="rule-icon"><svg><use href="#i-folder"/></svg></span><div><strong>图片素材</strong><span>格式为 JPG / PNG → 灵感</span></div><button class="switch on" aria-label="启用图片素材规则"></button></div><div class="rule"><span class="rule-icon"><svg><use href="#i-archive"/></svg></span><div><strong>大文件归档</strong><span>大小超过 100 MB → 项目</span></div><button class="switch" aria-label="启用大文件归档规则"></button></div></div>
+    </section>
+
+    <section class="page" data-page="settings">
+      <div class="section-heading" style="margin-top:2px"><div><h2 style="font-size:28px">设置</h2><span>让收纳方式更贴合你的习惯</span></div><svg style="width:24px;height:24px;color:var(--action-dark)"><use href="#i-settings"/></svg></div>
+      <div class="settings-group"><h3>整理偏好</h3><div class="card"><div class="setting"><span class="setting-icon"><svg><use href="#i-wand"/></svg></span><div class="setting-copy"><strong>自动整理</strong><span>导入后按当前规则建议分类</span></div><button class="switch on" aria-label="开启自动整理"></button></div><div class="setting"><span class="setting-icon"><svg><use href="#i-archive"/></svg></span><div class="setting-copy"><strong>文件范围</strong><span>只整理你授权过的文件</span></div><span class="setting-value">已选择</span></div></div></div>
+      <div class="settings-group"><h3>外观</h3><div class="card"><div class="setting"><span class="setting-icon"><svg><use href="#i-check"/></svg></span><div class="setting-copy"><strong>皮肤主题</strong><span>顶部渐变和操作色会一起切换</span></div><select id="theme" class="setting-value" style="border:0;background:transparent;color:var(--text-body)"><option value="teal">青绿色渐变</option><option value="coral">珊瑚橙</option><option value="violet">紫罗兰</option></select></div></div></div>
+      <div class="settings-group"><h3>关于</h3><div class="card"><div class="setting"><div class="setting-copy"><strong>拾序</strong><span>版本 1.0.0 · HarmonyOS</span></div><span class="setting-value">本地优先</span></div></div></div>
+    </section>
+
+    <nav class="bottom-nav"><div class="nav-inner"><button class="nav-item active" data-page-link="home"><svg><use href="#i-archive"/></svg><span>收纳箱</span></button><button class="nav-item" data-page-link="categories"><svg><use href="#i-folder"/></svg><span>分类</span></button><button class="nav-item add" data-open-sheet aria-label="添加文件"><svg><use href="#i-plus"/></svg><span>添加</span></button><button class="nav-item" data-page-link="smart"><svg><use href="#i-wand"/></svg><span>智能</span></button><button class="nav-item" data-page-link="settings"><svg><use href="#i-settings"/></svg><span>设置</span></button></div></nav>
+  </main>
+
+  <div class="sheet-backdrop" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="sheet"><div class="sheet-handle"></div><h2 id="sheet-title">添加文件</h2><p>原型模式只模拟导入流程，真实版本会调用系统文件选择器。</p><div class="sheet-actions"><button class="button" data-toast data-close-sheet>从设备选择文件</button><button class="button secondary" data-close-sheet>稍后再说</button></div></div></div>
+  <script>
+    const pages = [...document.querySelectorAll('.page')];
+    const navItems = [...document.querySelectorAll('.nav-item')];
+    const sheet = document.querySelector('#sheet');
+    const showPage = (name) => {
+      pages.forEach((page) => page.classList.toggle('active', page.dataset.page === name));
+      navItems.forEach((item) => item.classList.toggle('active', item.dataset.pageLink === name));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    document.querySelectorAll('[data-page-link]').forEach((el) => el.addEventListener('click', () => showPage(el.dataset.pageLink)));
+    document.querySelectorAll('[data-open-sheet]').forEach((el) => el.addEventListener('click', () => sheet.classList.add('open')));
+    document.querySelectorAll('[data-close-sheet]').forEach((el) => el.addEventListener('click', () => sheet.classList.remove('open')));
+    sheet.addEventListener('click', (event) => { if (event.target === sheet) sheet.classList.remove('open'); });
+    document.querySelectorAll('.switch').forEach((el) => el.addEventListener('click', () => el.classList.toggle('on')));
+    document.querySelector('[data-segmented]').addEventListener('click', (event) => { if (event.target.tagName === 'BUTTON') { document.querySelectorAll('[data-segmented] button').forEach((button) => button.classList.remove('active')); event.target.classList.add('active'); } });
+    document.querySelectorAll('[data-toast]').forEach((el) => el.addEventListener('click', () => { sheet.classList.remove('open'); el.textContent = '已提交，等待整理'; setTimeout(() => { el.textContent = '运行智能整理'; }, 1400); }));
+    document.querySelector('#theme').addEventListener('change', (event) => {
+      const root = document.documentElement;
+      if (event.target.value === 'coral') {
+        root.style.setProperty('--page-bg', '#fbf7f5'); root.style.setProperty('--surface-muted', '#f3eeec'); root.style.setProperty('--action-dark', '#f06f52'); root.style.setProperty('--accent-sage', '#12b886'); root.style.setProperty('--accent-blue-gray', '#5d8faa'); root.style.setProperty('--accent-mauve', '#9a78c6'); root.style.setProperty('--accent-clay', '#d4875c');
+      } else if (event.target.value === 'violet') {
+        root.style.setProperty('--page-bg', '#f8f7fc'); root.style.setProperty('--surface-muted', '#f0eef7'); root.style.setProperty('--action-dark', '#6958d6'); root.style.setProperty('--accent-sage', '#17b994'); root.style.setProperty('--accent-blue-gray', '#7386b8'); root.style.setProperty('--accent-mauve', '#806ed5'); root.style.setProperty('--accent-clay', '#c98a72');
+      } else {
+        root.style.setProperty('--page-bg', '#f6f9f8'); root.style.setProperty('--surface-muted', '#eef5f2'); root.style.setProperty('--action-dark', '#00b887'); root.style.setProperty('--accent-sage', '#00b887'); root.style.setProperty('--accent-blue-gray', '#4d93a3'); root.style.setProperty('--accent-mauve', '#7b6bc7'); root.style.setProperty('--accent-clay', '#d38a62');
+      }
+    });
+  </script>
+</body>
+</html>

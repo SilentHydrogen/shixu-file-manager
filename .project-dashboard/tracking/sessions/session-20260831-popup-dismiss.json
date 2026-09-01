@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "session-20260831-popup-dismiss",
+  "codexThreadId": null,
+  "status": "completed",
+  "objective": "为未归纳文件、自定义分类及其他底部弹层增加轻量背景遮罩，并支持点击弹层外区域关闭。",
+  "startedAt": "2026-08-31T23:06:00+08:00",
+  "endedAt": "2026-08-31T23:10:00+08:00",
+  "steps": [
+    "检查 Index.ets 中各类弹层的 Stack 层级和关闭状态",
+    "增加共享底部弹层遮罩和统一外部点击关闭方法",
+    "使用 220ms EaseOut 透明度过渡，完成静态 diff 检查",
+    "使用 Hvigor assembleHap 完成 ArkTS 编译、打包和签名验证"
+  ],
+  "commands": [
+    "rg -n \"未归纳|自定义分类|分类|popup|弹窗|overlay|Modal|bindContentCover|bindSheet|alertDialog|CustomDialog\" -S .",
+    "rg -n \"build\\(\\)|Stack\\(|showFileAction|showCategoryEditor|showQuickAdd|showFileDetail|showRuleEditor\" entry/src/main/ets/pages/Index.ets",
+    "git diff --check",
+    "git status --short",
+    "D:\\DevEco Studio\\tools\\hvigor\\bin\\hvigorw.bat assembleHap --no-daemon --no-parallel"
+  ],
+  "decisions": [
+    "将遮罩作为所有底部弹层之前的 Stack 兄弟节点，确保点击遮罩不会冒泡到弹层内部控件",
+    "遮罩采用 #40000000 的轻量透明黑色，避免复用确认弹窗的较深主题遮罩",
+    "点击外部仅关闭文件操作、文件标签、自定义分类、整理规则和添加文件底部弹层，确认类弹窗继续要求显式操作"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "result": "底部弹层现在共享轻量动画遮罩，点击非弹层区域即可关闭；保留原有关闭按钮和弹层内交互。",
+  "blockers": [
+    "尚未在真实设备或模拟器上完成灰度、触摸命中区域和动画流畅性验收。"
+  ],
+  "linkedTaskIds": [],
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T23:10:00+08:00",
+  "updatedAt": "2026-08-31T23:15:00+08:00"
+}

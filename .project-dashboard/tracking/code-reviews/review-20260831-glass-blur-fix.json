@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-glass-blur-fix",
+  "taskId": null,
+  "sessionId": "session-20260831-glass-blur-fix",
+  "status": "approved_with_notes",
+  "whatChanged": "移除导航栏、底部弹层和状态提示上与半透明背景冲突的 backgroundBlurStyle，改用 backdropBlur(18/28/14) 配合半透明背景与玻璃描边。",
+  "why": "HarmonyOS SDK 文档规定设置非透明 backgroundColor 时不应同时设置 backgroundBlurStyle；该组合会导致后景模糊不产生预期效果。",
+  "risk": "真实模糊半径和黄色主题叠加后的观感仍依赖设备系统渲染，需进行真机视觉验收。",
+  "validation": [
+    "ArkTS CompileArkTS 通过",
+    "Hvigor assembleHap 构建成功",
+    "目标文件中已无 backgroundBlurStyle，所有玻璃节点均使用 backdropBlur",
+    "git diff --check 未发现本次改动引入的格式错误"
+  ],
+  "followUps": [
+    "在设备上确认底部导航、底部弹层和状态胶囊能看到后景内容的高斯扩散",
+    "若黄色仍过重，优先降低 blur_bg_* 的色彩饱和度或 alpha，不要移除 backdropBlur"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T23:45:00+08:00"
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-category-smart-rollback",
+  "taskId": null,
+  "sessionId": "session-20260831-category-smart-rollback",
+  "status": "approved_with_notes",
+  "whatChanged": "智能页恢复紧凑标题行，分类页恢复左侧小方框图标的横向列表卡片；新增图标类型继续保留。",
+  "why": "匹配用户对页面密度和图标占位方式的明确反馈。",
+  "risk": "视觉比例仍需设备截图确认；图标资源为本地 SVG，不含外部版权依赖。",
+  "validation": ["Hvigor assembleHap 构建成功"],
+  "followUps": ["在设备上确认分类图标方框大小和智能页标题间距"],
+  "changedFiles": ["entry/src/main/ets/pages/Index.ets"],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T00:00:00+08:00"
+}

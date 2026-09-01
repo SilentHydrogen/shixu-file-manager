@@ -17,6 +17,7 @@ export interface WidgetFile {
 }
 
 export interface WidgetData {
+  skinTheme: string;
   totalCount: number;
   pendingCount: number;
   categoryList: WidgetCategory[];

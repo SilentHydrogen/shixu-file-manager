@@ -1,0 +1,16 @@
+{
+  "riskId": "risk-20260831-summary-time-display-build-unverified",
+  "kind": "validation",
+  "severity": "low",
+  "status": "open",
+  "title": "时间显示改动尚未完成 HarmonyOS 构建验证",
+  "impact": "ArkTS 编译或设备渲染问题无法在当前环境提前发现。",
+  "owner": "开发者",
+  "mitigation": "在 DevEco Studio 中执行 entry 模块构建并在模拟器/设备检查日期列布局。",
+  "dueAt": null,
+  "linkedTaskIds": [],
+  "linkedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "updatedAt": "2026-08-31T23:17:00+08:00"
+}

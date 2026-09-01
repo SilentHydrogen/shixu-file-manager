@@ -39,6 +39,7 @@ export default class FileBoxFormAbility extends FormExtensionAbility {
 
   private buildWidgetData(): WidgetData {
     const data: WidgetData = {
+      skinTheme: 'teal',
       totalCount: 0,
       pendingCount: 0,
       categoryList: [],
@@ -48,12 +49,16 @@ export default class FileBoxFormAbility extends FormExtensionAbility {
       const store = preferences.getPreferencesSync(this.context, { name: 'file_box_data' });
       const filesValue = store.getSync('files', '[]');
       const categoriesValue = store.getSync('categories', '[]');
+      const themeValue = store.getSync('skinTheme', 'teal');
       const files: PersistedFile[] = typeof filesValue === 'string'
         ? JSON.parse(filesValue) as PersistedFile[]
         : [];
       const categories: PersistedCategory[] = typeof categoriesValue === 'string'
         ? JSON.parse(categoriesValue) as PersistedCategory[]
         : [];
+      if (typeof themeValue === 'string' && ['teal', 'coral', 'violet'].includes(themeValue)) {
+        data.skinTheme = themeValue;
+      }
 
       data.totalCount = files.length;
       data.pendingCount = files.filter((file: PersistedFile) => file.tag === '待整理').length;
@@ -70,7 +75,7 @@ export default class FileBoxFormAbility extends FormExtensionAbility {
 
       const recentList: WidgetFile[] = files
         .filter((file: PersistedFile) => file.tag !== '待整理')
-        .slice(0, 2)
+        .slice(0, 3)
         .map((file: PersistedFile): WidgetFile => {
           const item: WidgetFile = { name: file.name, tag: file.tag, color: file.color, icon: file.icon };
           return item;

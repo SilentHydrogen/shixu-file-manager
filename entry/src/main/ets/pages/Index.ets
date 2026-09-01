@@ -7,6 +7,7 @@ import { common } from '@kit.AbilityKit';
 import { image } from '@kit.ImageKit';
 import { textRecognition } from '@kit.CoreVisionKit';
 import { pdfService } from '@kit.PDFKit';
+import { Icon } from '../components/Icon';
 
 interface CategoryItem {
   name: string;
@@ -72,13 +73,14 @@ struct Index {
   @State showCategoryDeleteConfirm: boolean = false;
   @State deletingCategoryName: string = '';
   @State newCategoryName: string = '';
-  @State newCategoryColor: string = '#E9F0FF';
-  @State newCategoryIcon: string = '◇';
+  @State newCategoryColor: string = '#DDF5EE';
+  @State newCategoryIcon: string = 'folder';
   @State showCategoryRuleOptions: boolean = false;
   @State newCategoryTitleKeywords: string = '';
   @State newCategoryFormats: string = '';
   @State selectedUris: string[] = [];
   @State autoOrganize: boolean = true;
+  @State skinTheme: string = 'teal';
   @State showAllHomeCategories: boolean = false;
   @State scanStatus: string = '等待导入';
   @State scanStatusType: string = 'idle';
@@ -107,11 +109,11 @@ struct Index {
   @State ruleListRevision: number = 0;
   @State files: FileItem[] = [];
   @State categories: CategoryItem[] = [
-    { name: '工作', color: '#E9F0FF', icon: '▤', subtitle: '会议、规范与交付物' },
-    { name: '项目', color: '#F3E9FF', icon: '✦', subtitle: '正在推进的事项' },
-    { name: '生活', color: '#E5F7EF', icon: '☷', subtitle: '日常计划与清单' },
-    { name: '灵感', color: '#E7F5F8', icon: '□', subtitle: '收藏的想法与素材' },
-    { name: '待整理', color: '#FFF0DD', icon: '◉', subtitle: '还没有归位的文件' }
+    { name: '工作', color: '#E6EDF3', icon: 'briefcase', subtitle: '会议、规范与交付物' },
+    { name: '项目', color: '#EDE8EF', icon: 'folder', subtitle: '正在推进的事项' },
+    { name: '生活', color: '#E7EEE9', icon: 'leaf', subtitle: '日常计划与清单' },
+    { name: '灵感', color: '#E7F0F0', icon: 'lightbulb', subtitle: '收藏的想法与素材' },
+    { name: '待整理', color: '#F2E7E2', icon: 'inbox-warning', subtitle: '还没有归位的文件' }
   ];
   @State rules: SmartRule[] = [
     { id: 101, name: '工作文档', titleKeywords: '会议,报告,方案,合同,规范,简历', contentKeywords: '', formats: '', targetTag: '工作', enabled: true, isDefault: true },
@@ -129,6 +131,7 @@ struct Index {
       const categoriesValue = this.preferenceStore.getSync('categories', '[]');
       const profileValue = this.preferenceStore.getSync('profile', '通用');
       const autoValue = this.preferenceStore.getSync('autoOrganize', true);
+      const themeValue = this.preferenceStore.getSync('skinTheme', 'teal');
       if (typeof filesValue === 'string') {
         const savedFiles = JSON.parse(filesValue) as FileItem[];
         this.files = savedFiles.map((file: FileItem) => {
@@ -170,6 +173,9 @@ struct Index {
       }
       if (typeof autoValue === 'boolean') {
         this.autoOrganize = autoValue;
+      }
+      if (typeof themeValue === 'string' && ['teal', 'coral', 'violet'].includes(themeValue)) {
+        this.skinTheme = themeValue;
       }
       const savedDefaultRules: SmartRule[] = this.rules.filter((rule: SmartRule) => rule.isDefault);
       const customRules: SmartRule[] = this.rules.filter((rule: SmartRule) => !rule.isDefault);
@@ -217,6 +223,8 @@ struct Index {
       this.switchTab('分类');
     } else if (route === 'recent-files') {
       this.switchTab('收纳箱');
+    } else if (route === 'quick-add') {
+      this.showQuickAdd = true;
     }
   }
 
@@ -275,6 +283,7 @@ struct Index {
       this.preferenceStore.putSync('categories', JSON.stringify(this.categories));
       this.preferenceStore.putSync('profile', this.profileType);
       this.preferenceStore.putSync('autoOrganize', this.autoOrganize);
+      this.preferenceStore.putSync('skinTheme', this.skinTheme);
       this.preferenceStore.flush().catch(() => {});
     } catch (error) {
       this.flashScanStatus('error', '本地保存失败');
@@ -294,6 +303,30 @@ struct Index {
     });
   }
 
+  private twoDigit(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
+  }
+
+  private formatFileUpdated(file: FileItem): string {
+    const timestamp: number = file.tag === '待整理'
+      ? file.importedAt
+      : (file.organizedAt > 0 ? file.organizedAt : file.importedAt);
+    if (timestamp <= 0) {
+      return file.updated;
+    }
+    const date: Date = new Date(timestamp);
+    if (!(date.getTime() > 0)) {
+      return file.updated;
+    }
+    const now: Date = new Date();
+    if (date.getFullYear() === now.getFullYear()
+      && date.getMonth() === now.getMonth()
+      && date.getDate() === now.getDate()) {
+      return `${this.twoDigit(date.getHours())}:${this.twoDigit(date.getMinutes())}`;
+    }
+    return `${date.getFullYear()}.${this.twoDigit(date.getMonth() + 1)}.${this.twoDigit(date.getDate())}`;
+  }
+
   private categoryCount(label: string): number {
     return this.files.filter((file: FileItem) => file.tag === label).length;
   }
@@ -307,37 +340,37 @@ struct Index {
   private profileCategories(profile: string): CategoryItem[] {
     if (profile === '学生') {
       return [
-        { name: '课程', color: '#E9F0FF', icon: '▤', subtitle: '课件、讲义与课堂资料' },
-        { name: '作业', color: '#F3E9FF', icon: '◇', subtitle: '作业、实验与待提交内容' },
-        { name: '证件', color: '#E5F7EF', icon: '□', subtitle: '证明、证书与报名材料' },
-        { name: '生活', color: '#E7F5F8', icon: '☷', subtitle: '日常计划与清单' },
-        { name: '待整理', color: '#FFF0DD', icon: '◉', subtitle: '还没有归位的文件' }
+        { name: '课程', color: '#E6EDF3', icon: 'document', subtitle: '课件、讲义与课堂资料' },
+        { name: '作业', color: '#EDE8EF', icon: 'folder', subtitle: '作业、实验与待提交内容' },
+        { name: '证件', color: '#E7EEE9', icon: 'archive-box', subtitle: '证明、证书与报名材料' },
+        { name: '生活', color: '#E7F0F0', icon: 'leaf', subtitle: '日常计划与清单' },
+        { name: '待整理', color: '#F2E7E2', icon: 'inbox-warning', subtitle: '还没有归位的文件' }
       ];
     }
     if (profile === '摄影师') {
       return [
-        { name: '原片', color: '#E9F0FF', icon: '▤', subtitle: 'RAW、DNG 与相机原片' },
-        { name: '视频', color: '#F3E9FF', icon: '✦', subtitle: '拍摄视频与剪辑素材' },
-        { name: '交付', color: '#E5F7EF', icon: '□', subtitle: '成片、样片与客户交付' },
-        { name: '灵感', color: '#E7F5F8', icon: '◇', subtitle: '参考图、样片与 moodboard' },
-        { name: '待整理', color: '#FFF0DD', icon: '◉', subtitle: '还没有归位的文件' }
+        { name: '原片', color: '#E6EDF3', icon: 'image', subtitle: 'RAW、DNG 与相机原片' },
+        { name: '视频', color: '#EDE8EF', icon: 'video', subtitle: '拍摄视频与剪辑素材' },
+        { name: '交付', color: '#E7EEE9', icon: 'archive-box', subtitle: '成片、样片与客户交付' },
+        { name: '灵感', color: '#E7F0F0', icon: 'lightbulb', subtitle: '参考图、样片与 moodboard' },
+        { name: '待整理', color: '#F2E7E2', icon: 'inbox-warning', subtitle: '还没有归位的文件' }
       ];
     }
     if (profile === '程序员') {
       return [
-        { name: '源码', color: '#E9F0FF', icon: '▤', subtitle: '代码、配置与脚本' },
-        { name: '文档', color: '#F3E9FF', icon: '□', subtitle: 'README、需求与接口说明' },
-        { name: '构建产物', color: '#E5F7EF', icon: '◉', subtitle: '压缩包、安装包与交付文件' },
-        { name: '项目', color: '#E7F5F8', icon: '✦', subtitle: '项目资料与协作文件' },
-        { name: '待整理', color: '#FFF0DD', icon: '☷', subtitle: '还没有归位的文件' }
+        { name: '源码', color: '#E6EDF3', icon: 'layers', subtitle: '代码、配置与脚本' },
+        { name: '文档', color: '#EDE8EF', icon: 'document', subtitle: 'README、需求与接口说明' },
+        { name: '构建产物', color: '#E7EEE9', icon: 'archive-box', subtitle: '压缩包、安装包与交付文件' },
+        { name: '项目', color: '#E7F0F0', icon: 'folder', subtitle: '项目资料与协作文件' },
+        { name: '待整理', color: '#F2E7E2', icon: 'inbox-warning', subtitle: '还没有归位的文件' }
       ];
     }
     return [
-      { name: '工作', color: '#E9F0FF', icon: '▤', subtitle: '会议、规范与交付物' },
-      { name: '项目', color: '#F3E9FF', icon: '✦', subtitle: '正在推进的事项' },
-      { name: '生活', color: '#E5F7EF', icon: '☷', subtitle: '日常计划与清单' },
-      { name: '灵感', color: '#E7F5F8', icon: '□', subtitle: '收藏的想法与素材' },
-      { name: '待整理', color: '#FFF0DD', icon: '◉', subtitle: '还没有归位的文件' }
+      { name: '工作', color: '#E6EDF3', icon: 'briefcase', subtitle: '会议、规范与交付物' },
+      { name: '项目', color: '#EDE8EF', icon: 'folder', subtitle: '正在推进的事项' },
+      { name: '生活', color: '#E7EEE9', icon: 'leaf', subtitle: '日常计划与清单' },
+      { name: '灵感', color: '#E7F0F0', icon: 'lightbulb', subtitle: '收藏的想法与素材' },
+      { name: '待整理', color: '#F2E7E2', icon: 'inbox-warning', subtitle: '还没有归位的文件' }
     ];
   }
 
@@ -369,8 +402,8 @@ struct Index {
     }
     const category: CategoryItem = {
       name: name,
-      color: '#E9F0FF',
-      icon: '□',
+      color: '#E6EDF3',
+      icon: 'folder',
       subtitle: '由整理规则生成'
     };
     return category;
@@ -473,6 +506,108 @@ struct Index {
 
   private defaultRules(): SmartRule[] {
     return this.rules.filter((rule: SmartRule) => rule.isDefault);
+  }
+
+  private themeColor(name: string): ResourceColor {
+    if (this.skinTheme === 'coral') {
+      if (name === 'accent_primary') return '#F06F52';
+      if (name === 'accent_blue') return '#5D8FAA';
+      if (name === 'accent_green') return '#12B886';
+      if (name === 'accent_purple') return '#9A78C6';
+      if (name === 'accent_amber') return '#D4875C';
+      if (name === 'accent_cyan') return '#4B9FA8';
+      if (name === 'accent_red') return '#D96B68';
+      if (name === 'page_bg') return '#FBF7F5';
+      if (name === 'card_bg') return '#FFFFFF';
+      if (name === 'tint_gray') return '#F3EEEC';
+      if (name === 'tint_blue_strong') return '#FFF0EB';
+      if (name === 'tint_green') return '#E8F6EF';
+      if (name === 'tint_blue') return '#EAF2F5';
+      if (name === 'tint_amber') return '#FFF0E4';
+      if (name === 'tint_red') return '#FBEAE6';
+      if (name === 'tint_cream') return '#FFF2E8';
+      if (name === 'blur_bg_bar') return '#C7FBF7F5';
+      if (name === 'blur_bg_sheet') return '#D9FFFDFC';
+      if (name === 'blur_bg_toast') return '#B8FFFFFF';
+      if (name === 'glass_border') return '#80FFFFFF';
+      if (name === 'text_primary') return '#302521';
+      if (name === 'text_body') return '#766B67';
+      if (name === 'text_caption') return '#A69A95';
+      if (name === 'text_disabled') return '#C8BCB7';
+      if (name === 'header_text') return '#FFF5F1';
+      if (name === 'shadow_card') return '#241E1C33';
+      if (name === 'mask') return '#80302620';
+    }
+    if (this.skinTheme === 'violet') {
+      if (name === 'accent_primary') return '#6958D6';
+      if (name === 'accent_blue') return '#7386B8';
+      if (name === 'accent_green') return '#17B994';
+      if (name === 'accent_purple') return '#806ED5';
+      if (name === 'accent_amber') return '#C98A72';
+      if (name === 'accent_cyan') return '#5C9EAD';
+      if (name === 'accent_red') return '#D96B78';
+      if (name === 'page_bg') return '#F8F7FC';
+      if (name === 'card_bg') return '#FFFFFF';
+      if (name === 'tint_gray') return '#F0EEF7';
+      if (name === 'tint_blue_strong') return '#ECEBFA';
+      if (name === 'tint_green') return '#E7F6F0';
+      if (name === 'tint_blue') return '#E9EEF8';
+      if (name === 'tint_amber') return '#FFF0E8';
+      if (name === 'tint_red') return '#FBE9EE';
+      if (name === 'tint_cream') return '#FFF2EA';
+      if (name === 'blur_bg_bar') return '#C7F8F7FC';
+      if (name === 'blur_bg_sheet') return '#D9FFFDFC';
+      if (name === 'blur_bg_toast') return '#B8FFFFFF';
+      if (name === 'glass_border') return '#80FFFFFF';
+      if (name === 'text_primary') return '#27243A';
+      if (name === 'text_body') return '#68657A';
+      if (name === 'text_caption') return '#9692A8';
+      if (name === 'text_disabled') return '#BCB9C9';
+      if (name === 'header_text') return '#F7F5FF';
+      if (name === 'shadow_card') return '#25203A33';
+      if (name === 'mask') return '#8027243A';
+    }
+    if (name === 'accent_primary') return '#00B887';
+    if (name === 'accent_blue') return '#4D93A3';
+    if (name === 'accent_green') return '#00B887';
+    if (name === 'accent_purple') return '#7B6BC7';
+    if (name === 'accent_amber') return '#D38A62';
+    if (name === 'accent_cyan') return '#4AA7B5';
+    if (name === 'accent_red') return '#D96B68';
+    if (name === 'page_bg') return '#F6F9F8';
+    if (name === 'card_bg') return '#FFFFFF';
+    if (name === 'tint_gray') return '#F0F5F3';
+    if (name === 'tint_blue_strong') return '#E5F4F0';
+    if (name === 'tint_green') return '#E5F4EC';
+    if (name === 'tint_blue') return '#E9F0FF';
+    if (name === 'tint_amber') return '#FFF0DD';
+    if (name === 'tint_red') return '#FBEAE6';
+    if (name === 'tint_cream') return '#FFF2E8';
+    if (name === 'blur_bg_bar') return '#C7F6F9F8';
+    if (name === 'blur_bg_sheet') return '#D9FFFDFC';
+    if (name === 'blur_bg_toast') return '#B8FFFFFF';
+    if (name === 'glass_border') return '#80FFFFFF';
+    if (name === 'text_primary') return '#18252A';
+    if (name === 'text_body') return '#66737A';
+    if (name === 'text_caption') return '#98A3A6';
+    if (name === 'text_disabled') return '#B8C0C1';
+    if (name === 'header_text') return '#E9FFFA';
+    if (name === 'shadow_card') return '#1A1D2633';
+    if (name === 'mask') return '#80000000';
+    return '#66737A';
+  }
+
+  private themeGradientEnd(): ResourceColor {
+    if (this.skinTheme === 'coral') return '#FFAA8E';
+    if (this.skinTheme === 'violet') return '#9B8BE9';
+    return '#59D2BC';
+  }
+
+  private setSkinTheme(theme: string): void {
+    if (['teal', 'coral', 'violet'].includes(theme)) {
+      this.skinTheme = theme;
+      this.persistState();
+    }
   }
 
   private ruleCount(isDefault: boolean): number {
@@ -771,13 +906,10 @@ struct Index {
   @Builder
   private ruleRow(rule: SmartRule, index: number, total: number) {
     Row() {
-      Text('⋮⋮')
+      Icon({ source: $r('app.media.icon_layers'), iconSize: 18, tint: this.sortingRuleId === rule.id ? this.themeColor('accent_green') : (total <= 1 ? '#C8D0DA' : '#9AA8B8') })
         .width(34)
         .height(84)
-        .fontSize(20)
-        .fontColor(this.sortingRuleId === rule.id ? $r('app.color.accent_green') : (total <= 1 ? '#C8D0DA' : '#9AA8B8'))
-        .textAlign(TextAlign.Center)
-        .backgroundColor(this.sortingRuleId === rule.id ? '#E5F4EC' : $r('app.color.tint_gray'))
+        .backgroundColor(this.sortingRuleId === rule.id ? this.themeColor('tint_green') : this.themeColor('tint_gray'))
         .borderRadius(12)
         .gesture(
           LongPressGesture({ duration: 450, repeat: false })
@@ -791,14 +923,14 @@ struct Index {
             Text(rule.name)
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
             Text(rule.isDefault ? '默认' : '自定义')
               .fontSize(10)
-              .fontColor(rule.isDefault ? $r('app.color.accent_blue') : $r('app.color.accent_green'))
+              .fontColor(rule.isDefault ? this.themeColor('accent_blue') : this.themeColor('accent_green'))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(rule.isDefault ? '#E9F0FF' : '#E5F4EC')
+              .backgroundColor(rule.isDefault ? this.themeColor('tint_blue') : this.themeColor('tint_green'))
               .borderRadius(6)
           }
           .layoutWeight(1)
@@ -806,7 +938,7 @@ struct Index {
         .width('100%')
         Text(this.ruleDescription(rule))
           .fontSize(11)
-          .fontColor($r('app.color.text_caption'))
+          .fontColor(this.themeColor('text_caption'))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 7 })
@@ -815,13 +947,13 @@ struct Index {
           Toggle({ type: ToggleType.Switch, isOn: rule.enabled })
             .width(54)
             .height(30)
-            .selectedColor($r('app.color.accent_green'))
+            .selectedColor(this.themeColor('accent_green'))
             .onChange((isOn: boolean) => {
               this.setRuleEnabled(rule.id, isOn);
             })
           Text(rule.enabled ? '已启用' : '停用中')
             .fontSize(12)
-            .fontColor(rule.enabled ? $r('app.color.accent_green') : $r('app.color.text_disabled'))
+            .fontColor(rule.enabled ? this.themeColor('accent_green') : this.themeColor('text_disabled'))
             .fontWeight(FontWeight.Medium)
             .width(48)
           if (this.sortingRuleId === rule.id) {
@@ -829,8 +961,8 @@ struct Index {
               .width(56)
               .height(34)
               .fontSize(12)
-              .fontColor($r('app.color.accent_green'))
-              .backgroundColor('#E5F4EC')
+              .fontColor(this.themeColor('accent_green'))
+              .backgroundColor(this.themeColor('tint_green'))
               .borderRadius(10)
               .onClick(() => { this.sortingRuleId = 0; })
           } else if (this.canPlaceSortingRule(rule)) {
@@ -838,8 +970,8 @@ struct Index {
               .width(76)
               .height(34)
               .fontSize(12)
-              .fontColor($r('app.color.accent_blue'))
-              .backgroundColor('#E9F0FF')
+              .fontColor(this.themeColor('accent_blue'))
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(10)
               .onClick(() => { this.placeSortingRuleBefore(rule.id); })
           } else {
@@ -847,8 +979,8 @@ struct Index {
               .width(56)
               .height(34)
               .fontSize(12)
-              .fontColor($r('app.color.accent_blue'))
-              .backgroundColor('#E9F0FF')
+              .fontColor(this.themeColor('accent_blue'))
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(10)
               .onClick(() => { this.editRule(rule); })
           }
@@ -864,9 +996,9 @@ struct Index {
     .alignItems(VerticalAlign.Center)
     .width('100%')
     .padding({ left: 16, right: 16, top: 15, bottom: 15 })
-    .backgroundColor($r('app.color.card_bg'))
+    .backgroundColor(this.themeColor('card_bg'))
     .borderRadius(18)
-    .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+    .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
   }
 
   @Builder
@@ -874,13 +1006,13 @@ struct Index {
     Text(title)
       .fontSize(13)
       .fontWeight(FontWeight.Medium)
-      .fontColor($r('app.color.text_caption'))
+      .fontColor(this.themeColor('text_caption'))
       .alignSelf(ItemAlign.Start)
       .margin({ left: 22, top: 6, bottom: 8 })
     if (this.ruleCount(isDefault) === 0) {
       Text('暂无规则')
         .fontSize(12)
-        .fontColor($r('app.color.text_disabled'))
+        .fontColor(this.themeColor('text_disabled'))
         .alignSelf(ItemAlign.Start)
         .margin({ left: 22, bottom: 10 })
     } else {
@@ -965,7 +1097,7 @@ struct Index {
   private categoryByName(name: string): CategoryItem {
     const category: CategoryItem | undefined = this.categories.find((item: CategoryItem) => item.name === name);
     return category === undefined
-      ? { name: '待整理', color: '#FFF0DD', icon: '◉', subtitle: '' }
+      ? { name: '待整理', color: '#F2E7E2', icon: 'inbox-warning', subtitle: '' }
       : category;
   }
 
@@ -1001,7 +1133,9 @@ struct Index {
       parseSource: file.parseSource,
       manualTag: keepManualTag,
       importedAt: file.importedAt,
-      organizedAt: targetTag !== '待整理' && file.organizedAt === 0 ? Date.now() : file.organizedAt
+      organizedAt: targetTag !== '待整理' && (file.organizedAt === 0 || targetTag !== file.tag)
+        ? Date.now()
+        : file.organizedAt
     };
     return organizedFile;
   }
@@ -1077,7 +1211,7 @@ struct Index {
           parseSource: file.parseSource,
           manualTag: tag !== '待整理',
           importedAt: file.importedAt,
-          organizedAt: tag !== '待整理' && file.organizedAt === 0 ? Date.now() : file.organizedAt
+          organizedAt: tag !== '待整理' ? Date.now() : file.organizedAt
         };
         return updatedFile;
       }
@@ -1152,6 +1286,18 @@ struct Index {
     this.selectedFileName = currentFile.name;
     this.showFileAction = false;
     this.showFileDetail = true;
+  }
+
+  /**
+   * 关闭所有可由点击外部区域退出的底部弹层。
+   * 确认类弹窗保持显式操作，避免误触导致危险操作被取消。
+   */
+  private dismissSheetPopups(): void {
+    this.showFileAction = false;
+    this.showFileDetail = false;
+    this.showCategoryEditor = false;
+    this.showRuleEditor = false;
+    this.showQuickAdd = false;
   }
 
   private handleFileTap(file: FileItem): void {
@@ -1564,7 +1710,7 @@ struct Index {
           parseSource: file.parseSource,
           manualTag: true,
           importedAt: file.importedAt,
-          organizedAt: file.organizedAt === 0 ? Date.now() : file.organizedAt
+          organizedAt: Date.now()
         };
         return updatedFile;
       }
@@ -1578,25 +1724,84 @@ struct Index {
     this.persistState();
   }
 
+  private iconResource(icon: string): Resource {
+    switch (icon) {
+      case 'briefcase':
+      case String.fromCodePoint(0x25A4):
+        return $r('app.media.icon_briefcase');
+      case 'folder':
+      case String.fromCodePoint(0x25C7):
+        return $r('app.media.icon_folder');
+      case 'leaf':
+      case String.fromCodePoint(0x2637):
+        return $r('app.media.icon_leaf');
+      case 'lightbulb':
+      case String.fromCodePoint(0x25A1):
+        return $r('app.media.icon_lightbulb');
+      case 'inbox-warning':
+      case String.fromCodePoint(0x25C9):
+        return $r('app.media.icon_inbox_warning');
+      case 'wand':
+      case String.fromCodePoint(0x2726):
+      case String.fromCodePoint(0x2727):
+        return $r('app.media.icon_wand');
+      case 'settings':
+      case String.fromCodePoint(0x2699):
+        return $r('app.media.icon_settings');
+      case 'image':
+        return $r('app.media.icon_image');
+      case 'video':
+        return $r('app.media.icon_video');
+      case 'layers':
+        return $r('app.media.icon_layers');
+      case 'archive-box':
+        return $r('app.media.icon_archive_box');
+      case 'document':
+      case 'file':
+        return $r('app.media.icon_file');
+      case 'calendar':
+        return $r('app.media.icon_calendar');
+      case 'book':
+        return $r('app.media.icon_book');
+      case 'music':
+        return $r('app.media.icon_music');
+      case 'code':
+        return $r('app.media.icon_code');
+      case 'camera':
+        return $r('app.media.icon_camera');
+      case 'tag':
+        return $r('app.media.icon_tag');
+      case 'heart':
+        return $r('app.media.icon_heart');
+      case 'lock':
+        return $r('app.media.icon_lock');
+      default:
+        return $r('app.media.icon_file');
+    }
+  }
+
   @Builder
   private categoryCard(label: string, subtitle: string, color: string, icon: string) {
     Row() {
-      Text(icon)
-        .fontSize(22)
-        .fontColor($r('app.color.accent_blue'))
-        .width(46)
-        .height(46)
-        .textAlign(TextAlign.Center)
-        .backgroundColor(color)
-        .borderRadius(15)
+      Row() {
+        Icon({ source: this.iconResource(icon), iconSize: 26, tint: this.themeColor('accent_primary') })
+          .width(34)
+          .height(34)
+      }
+      .width(46)
+      .height(46)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor(color)
+      .borderRadius(14)
       Column() {
         Text(label)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.text_primary'))
+          .fontColor(this.themeColor('text_primary'))
         Text(subtitle)
           .fontSize(12)
-          .fontColor($r('app.color.text_caption'))
+          .fontColor(this.themeColor('text_caption'))
           .margin({ top: 4 })
       }
       .alignItems(HorizontalAlign.Start)
@@ -1604,17 +1809,17 @@ struct Index {
       .margin({ left: 12 })
       Text(`${this.categoryCount(label)} 项`)
         .fontSize(13)
-        .fontColor($r('app.color.text_caption'))
+        .fontColor(this.themeColor('text_caption'))
       Text('›')
         .fontSize(22)
-        .fontColor($r('app.color.text_disabled'))
+        .fontColor(this.themeColor('text_disabled'))
         .margin({ left: 5 })
     }
     .width('100%')
     .padding({ left: 14, right: 14, top: 13, bottom: 13 })
-    .backgroundColor($r('app.color.card_bg'))
-    .borderRadius(19)
-    .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+    .backgroundColor(this.themeColor('card_bg'))
+    .borderRadius(18)
+    .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
     .gesture(
       GestureGroup(GestureMode.Exclusive,
         LongPressGesture({ duration: 450, repeat: false })
@@ -1634,11 +1839,11 @@ struct Index {
   private filterChip(label: string) {
     Text(label)
       .fontSize(14)
-      .fontColor(this.selectedFilter === label ? Color.White : $r('app.color.text_body'))
+      .fontColor(this.selectedFilter === label ? Color.White : this.themeColor('text_body'))
       .fontWeight(this.selectedFilter === label ? FontWeight.Medium : FontWeight.Regular)
       .textAlign(TextAlign.Center)
       .padding({ left: 16, right: 16, top: 9, bottom: 9 })
-      .backgroundColor(this.selectedFilter === label ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
+      .backgroundColor(this.selectedFilter === label ? this.themeColor('accent_primary') : this.themeColor('tint_gray'))
       .borderRadius(18)
       .onClick(() => {
         this.selectedFilter = label;
@@ -1650,7 +1855,7 @@ struct Index {
     Text(`${category.name} ${this.categoryCount(category.name)}`)
       .fontSize(15)
       .fontWeight(FontWeight.Bold)
-      .fontColor(category.name === '待整理' ? $r('app.color.accent_amber') : $r('app.color.accent_blue'))
+      .fontColor(category.name === '待整理' ? this.themeColor('accent_amber') : this.themeColor('accent_blue'))
       .padding({ left: 15, right: 15, top: 9, bottom: 9 })
       .backgroundColor(category.color)
       .borderRadius(19)
@@ -1665,9 +1870,9 @@ struct Index {
     Text(`全部文件 ${this.files.length}`)
       .fontSize(15)
       .fontWeight(FontWeight.Bold)
-      .fontColor(this.selectedFilter === '全部' ? $r('app.color.card_bg') : $r('app.color.accent_primary'))
+      .fontColor(this.selectedFilter === '全部' ? Color.White : this.themeColor('accent_primary'))
       .padding({ left: 15, right: 15, top: 9, bottom: 9 })
-      .backgroundColor(this.selectedFilter === '全部' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
+      .backgroundColor(this.selectedFilter === '全部' ? this.themeColor('accent_primary') : this.themeColor('tint_gray'))
       .borderRadius(19)
       .margin({ right: 10, bottom: 10 })
       .onClick(() => {
@@ -1683,31 +1888,33 @@ struct Index {
             Text('拾序')
               .fontSize(40)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(Color.White)
               .alignSelf(ItemAlign.Start)
             Text('让每个文件，都有自己的位置')
               .fontSize(17)
-              .fontColor($r('app.color.text_caption'))
+              .fontColor(this.themeColor('header_text'))
               .alignSelf(ItemAlign.Start)
               .margin({ top: 7 })
           }
           .width('100%')
           .padding({ left: 32, right: 26, top: 23, bottom: 18 })
+          .linearGradient({ angle: 135, colors: [[this.themeColor('accent_primary'), 0.0], [this.themeGradientEnd(), 1.0]] })
+          .borderRadius({ bottomLeft: 28, bottomRight: 28 })
 
           Column() {
             Row() {
               Text('自动整理')
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
               Blank()
               Button('立即整理')
                 .height(40)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
-                .fontColor($r('app.color.accent_green'))
+                .fontColor(this.themeColor('accent_green'))
                 .padding({ left: 18, right: 18 })
-                .backgroundColor('#E5F4EC')
+                .backgroundColor(this.themeColor('tint_green'))
                 .borderRadius(20)
                 .onClick(() => {
                   this.runAutoOrganize();
@@ -1726,9 +1933,9 @@ struct Index {
                 Text(this.showAllHomeCategories ? '收起' : `更多 ${this.categories.length - 4}`)
                   .fontSize(15)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.text_body'))
+                  .fontColor(this.themeColor('text_body'))
                   .padding({ left: 15, right: 15, top: 9, bottom: 9 })
-                  .backgroundColor($r('app.color.tint_gray'))
+                  .backgroundColor(this.themeColor('tint_gray'))
                   .borderRadius(19)
                   .margin({ right: 10, bottom: 10 })
                   .onClick(() => {
@@ -1741,46 +1948,41 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 24, right: 24, top: 28, bottom: 25 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(34)
           .margin({ left: 26, right: 26, bottom: 26 })
-          .shadow({ radius: 28, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 12 })
+          .shadow({ radius: 28, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 12 })
 
           Row() {
             Text(this.selectedFilter === '全部' ? '最近文件' : `${this.selectedFilter} · 筛选结果`)
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
             Blank()
             Text(`${this.visibleFiles().length} 项`)
               .fontSize(13)
-              .fontColor($r('app.color.text_caption'))
+              .fontColor(this.themeColor('text_caption'))
           }
           .width('100%')
           .padding({ left: 22, right: 22, bottom: 12 })
 
           Row({ space: 8 }) {
-            Text('🔍')
-              .fontSize(14)
-              .fontColor($r('app.color.text_disabled'))
+            Icon({ source: $r('app.media.icon_search'), iconSize: 18, tint: this.themeColor('text_disabled') })
             TextInput({ text: this.query, placeholder: '搜索文件名或标签' })
               .layoutWeight(1)
               .height(36)
               .fontSize(14)
-              .fontColor($r('app.color.text_primary'))
-              .placeholderColor($r('app.color.text_disabled'))
+              .fontColor(this.themeColor('text_primary'))
+              .placeholderColor(this.themeColor('text_disabled'))
               .placeholderFont({ size: 14 })
               .backgroundColor(Color.Transparent)
               .onChange((value: string) => {
                 this.query = value;
               })
             if (this.query.length > 0) {
-              Text('×')
-                .fontSize(16)
-                .fontColor($r('app.color.text_disabled'))
+              Icon({ source: $r('app.media.icon_close'), iconSize: 18, tint: this.themeColor('text_disabled') })
                 .width(20)
                 .height(20)
-                .textAlign(TextAlign.Center)
                 .onClick(() => {
                   this.query = '';
                 })
@@ -1789,7 +1991,7 @@ struct Index {
           .width('100%')
           .height(44)
           .padding({ left: 14, right: 12 })
-          .backgroundColor($r('app.color.tint_gray'))
+          .backgroundColor(this.themeColor('tint_gray'))
           .borderRadius(16)
           .margin({ left: 22, right: 22, bottom: 14 })
 
@@ -1797,9 +1999,7 @@ struct Index {
             ForEach(this.visibleFiles(), (file: FileItem) => {
               Row() {
                 Row() {
-                  Text(file.icon)
-                    .fontSize(22)
-                    .fontColor($r('app.color.accent_blue'))
+                  Icon({ source: this.iconResource(file.icon), iconSize: 22, tint: this.themeColor('accent_blue') })
                 }
                 .width(48)
                 .height(48)
@@ -1810,18 +2010,18 @@ struct Index {
                   Text(file.name)
                     .fontSize(15)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor($r('app.color.text_primary'))
+                    .fontColor(this.themeColor('text_primary'))
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   Row({ space: 7 }) {
                     Text(file.kind + ' · ' + file.size)
                       .fontSize(12)
-                      .fontColor($r('app.color.text_caption'))
+                      .fontColor(this.themeColor('text_caption'))
                     Text(file.tag)
                       .fontSize(11)
-                      .fontColor($r('app.color.accent_blue'))
+                      .fontColor(this.themeColor('accent_blue'))
                       .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-                      .backgroundColor($r('app.color.tint_gray'))
+                      .backgroundColor(this.themeColor('tint_gray'))
                       .borderRadius(7)
                   }
                   .margin({ top: 5 })
@@ -1830,19 +2030,19 @@ struct Index {
                 .layoutWeight(1)
                 .margin({ left: 12, right: 7 })
                 Column() {
-                  Text(file.updated)
+                  Text(this.formatFileUpdated(file))
                     .fontSize(10)
-                    .fontColor($r('app.color.text_disabled'))
+                    .fontColor(this.themeColor('text_disabled'))
                 }
-                .width(54)
+                .width(78)
                 .alignItems(HorizontalAlign.End)
                 .alignSelf(ItemAlign.Start)
               }
               .width('100%')
               .padding({ left: 14, right: 14, top: 12, bottom: 12 })
-              .backgroundColor($r('app.color.card_bg'))
+              .backgroundColor(this.themeColor('card_bg'))
               .borderRadius(18)
-              .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+              .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
               .scale({
                 x: this.pressedFileId === file.id ? 0.985 : 1,
                 y: this.pressedFileId === file.id ? 0.985 : 1
@@ -1878,10 +2078,10 @@ struct Index {
             Column() {
               Text(this.files.length === 0 ? '还没有导入真实文件' : '没有找到匹配文件')
                 .fontSize(16)
-                .fontColor($r('app.color.text_body'))
+                .fontColor(this.themeColor('text_body'))
               Text(this.files.length === 0 ? '点击底部“添加”，从系统文件中选择' : '试试其他关键词或分类')
                 .fontSize(13)
-                .fontColor($r('app.color.text_disabled'))
+                .fontColor(this.themeColor('text_disabled'))
                 .margin({ top: 7 })
             }
             .width('100%')
@@ -1892,7 +2092,8 @@ struct Index {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.page_bg'))
+      .align(Alignment.TopStart)
+      .backgroundColor(this.themeColor('page_bg'))
       .scrollBar(BarState.Off)
       .opacity(this.pageOpacity)
       .translate({ x: 0, y: this.pageOffset })
@@ -1905,24 +2106,24 @@ struct Index {
                 Text('分类')
                   .fontSize(30)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.text_primary'))
+                  .fontColor(this.themeColor('text_primary'))
                 Text('按标签找到你要的文件')
                   .fontSize(14)
-                  .fontColor($r('app.color.text_caption'))
+                  .fontColor(this.themeColor('text_caption'))
                   .margin({ top: 5 })
               }
               .alignItems(HorizontalAlign.Start)
               Blank()
               Text(`${this.files.length} 项`)
                 .fontSize(13)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
             }
             .width('100%')
             .padding({ left: 22, right: 22, top: 23, bottom: 22 })
             Text('我的标签')
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
               .alignSelf(ItemAlign.Start)
               .margin({ left: 22, bottom: 12 })
             Column({ space: 10 }) {
@@ -1935,23 +2136,20 @@ struct Index {
             Row() {
               Text('自定义分类')
                 .fontSize(15)
-                .fontColor($r('app.color.accent_blue'))
+                .fontColor(this.themeColor('accent_blue'))
               Blank()
-              Text('+')
-                .fontSize(23)
-                .fontColor($r('app.color.accent_blue'))
+              Icon({ source: $r('app.media.icon_plus'), iconSize: 18, tint: this.themeColor('accent_blue') })
                 .width(32)
                 .height(32)
-                .textAlign(TextAlign.Center)
-                .backgroundColor('#E9F0FF')
+                .backgroundColor(this.themeColor('tint_blue'))
                 .borderRadius(16)
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(18)
           .margin({ left: 20, right: 20, top: 14 })
-          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
             .onClick(() => {
               this.newCategoryName = '';
               this.newCategoryTitleKeywords = '';
@@ -1961,7 +2159,7 @@ struct Index {
             })
             Text('点击标签即可回到收纳箱查看结果')
               .fontSize(12)
-              .fontColor($r('app.color.text_disabled'))
+              .fontColor(this.themeColor('text_disabled'))
               .margin({ top: 18 })
           }
           .width('100%')
@@ -1969,7 +2167,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.page_bg'))
+        .backgroundColor(this.themeColor('page_bg'))
         .scrollBar(BarState.Off)
         .opacity(this.pageOpacity)
         .translate({ x: 0, y: this.pageOffset })
@@ -1982,29 +2180,62 @@ struct Index {
               Text('设置')
                 .fontSize(30)
                 .fontWeight(FontWeight.Bold)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
               Text('让收纳方式更贴合你的习惯')
                 .fontSize(14)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 5 })
             }
             .alignItems(HorizontalAlign.Start)
           }
           .width('100%')
           .padding({ left: 22, right: 22, top: 23, bottom: 23 })
+          Text('皮肤主题')
+            .fontSize(13)
+            .fontColor(this.themeColor('text_caption'))
+            .alignSelf(ItemAlign.Start)
+            .margin({ left: 22, bottom: 9 })
+          Row({ space: 8 }) {
+            Button('青绿')
+              .layoutWeight(1)
+              .height(40)
+              .fontSize(13)
+              .fontColor(this.skinTheme === 'teal' ? Color.White : this.themeColor('text_body'))
+              .backgroundColor(this.skinTheme === 'teal' ? '#00B887' : this.themeColor('tint_gray'))
+              .borderRadius(12)
+              .onClick(() => { this.setSkinTheme('teal'); })
+            Button('珊瑚')
+              .layoutWeight(1)
+              .height(40)
+              .fontSize(13)
+              .fontColor(this.skinTheme === 'coral' ? Color.White : this.themeColor('text_body'))
+              .backgroundColor(this.skinTheme === 'coral' ? '#F06F52' : this.themeColor('tint_gray'))
+              .borderRadius(12)
+              .onClick(() => { this.setSkinTheme('coral'); })
+            Button('紫罗兰')
+              .layoutWeight(1)
+              .height(40)
+              .fontSize(13)
+              .fontColor(this.skinTheme === 'violet' ? Color.White : this.themeColor('text_body'))
+              .backgroundColor(this.skinTheme === 'violet' ? '#6958D6' : this.themeColor('tint_gray'))
+              .borderRadius(12)
+              .onClick(() => { this.setSkinTheme('violet'); })
+          }
+          .width('100%')
+          .padding({ left: 22, right: 22, bottom: 18 })
           Text('整理偏好')
             .fontSize(13)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, bottom: 9 })
           Row() {
             Column() {
               Text('立即整理')
                 .fontSize(16)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
               Text('按当前规则整理待整理文件')
                 .fontSize(12)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
@@ -2012,8 +2243,8 @@ struct Index {
             Button('运行')
               .fontSize(12)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.accent_green'))
-              .backgroundColor('#E5F4EC')
+              .fontColor(this.themeColor('accent_green'))
+              .backgroundColor(this.themeColor('tint_green'))
               .borderRadius(12)
               .onClick(() => {
                 this.runAutoOrganize();
@@ -2021,59 +2252,59 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 15, bottom: 15 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(18)
-          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
           Text('文件范围')
             .fontSize(13)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: 23, bottom: 9 })
           Row() {
             Column() {
               Text('已选择的文件')
                 .fontSize(16)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
               Text('只整理你授权过的文件，更安全')
                 .fontSize(12)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
             Text('›')
               .fontSize(22)
-              .fontColor($r('app.color.text_disabled'))
+              .fontColor(this.themeColor('text_disabled'))
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 15, bottom: 15 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(18)
-          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
           Text('关于收纳箱')
             .fontSize(13)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: 23, bottom: 9 })
           Row() {
             Text('版本 1.0.0 · ArkUI-X')
               .fontSize(15)
-              .fontColor($r('app.color.text_body'))
+              .fontColor(this.themeColor('text_body'))
             Blank()
             Text('›')
               .fontSize(22)
-              .fontColor($r('app.color.text_disabled'))
+              .fontColor(this.themeColor('text_disabled'))
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 16, bottom: 16 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(18)
-          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
         }
         .width('100%')
         .height('100%')
         .padding({ bottom: 76 })
-        .backgroundColor($r('app.color.page_bg'))
+        .backgroundColor(this.themeColor('page_bg'))
         .opacity(this.pageOpacity)
         .translate({ x: 0, y: this.pageOffset })
       }
@@ -2086,21 +2317,18 @@ struct Index {
               Text('智能')
                 .fontSize(30)
                 .fontWeight(FontWeight.Bold)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
               Text('把重复整理交给规则')
                 .fontSize(14)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 5 })
             }
             .alignItems(HorizontalAlign.Start)
             Blank()
-            Text('✧')
-              .fontSize(24)
-              .fontColor($r('app.color.accent_blue'))
+            Icon({ source: $r('app.media.icon_wand'), iconSize: 24, tint: this.themeColor('accent_blue') })
               .width(42)
               .height(42)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#E9F0FF')
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(21)
           }
           .width('100%')
@@ -2110,10 +2338,10 @@ struct Index {
               Text('运行智能整理')
                 .fontSize(18)
                 .fontWeight(FontWeight.Bold)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
               Text(this.files.length === 0 ? '导入文件后可按规则自动归类' : `按当前规则整理 ${this.files.length} 个文件`)
                 .fontSize(13)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 7 })
             }
             .alignItems(HorizontalAlign.Start)
@@ -2121,8 +2349,8 @@ struct Index {
             Button('立即整理')
               .fontSize(12)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.accent_green'))
-              .backgroundColor('#E5F4EC')
+              .fontColor(this.themeColor('accent_green'))
+              .backgroundColor(this.themeColor('tint_green'))
               .borderRadius(12)
               .onClick(() => {
                 this.runAutoOrganize();
@@ -2130,43 +2358,43 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
-          .backgroundColor($r('app.color.tint_blue_strong'))
+          .backgroundColor(this.themeColor('tint_blue_strong'))
           .borderRadius(22)
           .margin({ left: 20, right: 20, bottom: 22 })
-          .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 2 })
           Text('你的使用方式')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.text_primary'))
+            .fontColor(this.themeColor('text_primary'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, bottom: 11 })
           Row({ space: 8 }) {
             Button('学生')
               .fontSize(13)
-              .fontColor(this.profileType === '学生' ? Color.White : $r('app.color.text_body'))
+              .fontColor(this.profileType === '学生' ? Color.White : this.themeColor('text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '学生' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
+              .backgroundColor(this.profileType === '学生' ? this.themeColor('accent_primary') : this.themeColor('tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('学生'); })
             Button('摄影师')
               .fontSize(13)
-              .fontColor(this.profileType === '摄影师' ? Color.White : $r('app.color.text_body'))
+              .fontColor(this.profileType === '摄影师' ? Color.White : this.themeColor('text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '摄影师' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
+              .backgroundColor(this.profileType === '摄影师' ? this.themeColor('accent_primary') : this.themeColor('tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('摄影师'); })
             Button('程序员')
               .fontSize(13)
-              .fontColor(this.profileType === '程序员' ? Color.White : $r('app.color.text_body'))
+              .fontColor(this.profileType === '程序员' ? Color.White : this.themeColor('text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '程序员' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
+              .backgroundColor(this.profileType === '程序员' ? this.themeColor('accent_primary') : this.themeColor('tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('程序员'); })
             Button('通用')
               .fontSize(13)
-              .fontColor(this.profileType === '通用' ? Color.White : $r('app.color.text_body'))
+              .fontColor(this.profileType === '通用' ? Color.White : this.themeColor('text_body'))
               .height(36)
-              .backgroundColor(this.profileType === '通用' ? $r('app.color.accent_primary') : $r('app.color.tint_gray'))
+              .backgroundColor(this.profileType === '通用' ? this.themeColor('accent_primary') : this.themeColor('tint_gray'))
               .borderRadius(15)
               .onClick(() => { this.requestProfileChange('通用'); })
           }
@@ -2174,24 +2402,24 @@ struct Index {
           .padding({ left: 20, right: 20 })
           Text(this.profileType === '未设置' ? '选择后会生成更适合你的默认规则' : `已按${this.profileType}场景生成建议`)
             .fontSize(12)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: 9, bottom: 22 })
           Text(this.profileType === '学生' ? '建议依据：学科名称、作业/笔记关键词、课程文件夹' : this.profileType === '摄影师' ? '建议依据：拍摄日期、项目名、RAW/JPEG/视频类型' : this.profileType === '程序员' ? '建议依据：项目目录、语言扩展名、README 与构建产物' : '建议依据：文件名、类型、大小和最近使用时间')
             .fontSize(12)
-            .fontColor($r('app.color.accent_blue'))
+            .fontColor(this.themeColor('accent_blue'))
             .alignSelf(ItemAlign.Start)
             .margin({ left: 22, top: -13, bottom: 20 })
           Row() {
             Text('整理规则')
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
             Blank()
-            Button('+ 新建规则')
+            Button('新建规则')
               .fontSize(12)
-              .fontColor($r('app.color.accent_blue'))
-              .backgroundColor('#E9F0FF')
+              .fontColor(this.themeColor('accent_blue'))
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(13)
               .onClick(() => { this.startNewRule(); })
           }
@@ -2206,55 +2434,50 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.page_bg'))
+        .backgroundColor(this.themeColor('page_bg'))
         .opacity(this.pageOpacity)
         .translate({ x: 0, y: this.pageOffset })
       }
 
       Row() {
         Column() {
-          Text('▦').fontSize(23).fontColor(this.selectedTab === '收纳箱' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).height(29).textAlign(TextAlign.Center)
-          Text('收纳箱').fontSize(11).fontColor(this.selectedTab === '收纳箱' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).margin({ top: 0 })
+          Icon({ source: $r('app.media.icon_archive'), iconSize: 24, tint: this.selectedTab === '收纳箱' ? this.themeColor('text_primary') : this.themeColor('text_disabled') }).height(29)
+          Text('收纳箱').fontSize(11).fontColor(this.selectedTab === '收纳箱' ? this.themeColor('text_primary') : this.themeColor('text_disabled')).margin({ top: 0 })
         }
         .layoutWeight(1)
         .height(60)
         .justifyContent(FlexAlign.Center)
         .onClick(() => { this.switchTab('收纳箱'); })
         Column() {
-          Text('◇').fontSize(23).fontColor(this.selectedTab === '分类' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).height(29).textAlign(TextAlign.Center)
-          Text('分类').fontSize(11).fontColor(this.selectedTab === '分类' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).margin({ top: 0 })
+          Icon({ source: $r('app.media.icon_folder'), iconSize: 24, tint: this.selectedTab === '分类' ? this.themeColor('text_primary') : this.themeColor('text_disabled') }).height(29)
+          Text('分类').fontSize(11).fontColor(this.selectedTab === '分类' ? this.themeColor('text_primary') : this.themeColor('text_disabled')).margin({ top: 0 })
         }
         .layoutWeight(1)
         .height(60)
         .justifyContent(FlexAlign.Center)
         .onClick(() => { this.switchTab('分类'); })
         Column() {
-          Button('+')
-            .fontSize(24)
-            .fontWeight(FontWeight.Lighter)
-            .fontColor(Color.White)
+          Button() {
+            Icon({ source: $r('app.media.icon_plus_circle'), iconSize: 25, tint: Color.White })
+          }
             .width(44)
             .height(44)
             .borderRadius(22)
-            .backgroundColor($r('app.color.accent_primary'))
+            .backgroundColor(this.themeColor('accent_primary'))
             .onClick(() => { this.showQuickAdd = true; })
           Text('添加')
             .fontSize(11)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .margin({ top: 2 })
         }
         .layoutWeight(1)
         .height(60)
         .justifyContent(FlexAlign.Center)
         Column() {
-          Text('✧')
-            .fontSize(23)
-            .fontColor(this.selectedTab === '智能' ? $r('app.color.text_primary') : $r('app.color.text_disabled'))
-            .height(29)
-            .textAlign(TextAlign.Center)
+          Icon({ source: $r('app.media.icon_wand'), iconSize: 24, tint: this.selectedTab === '智能' ? this.themeColor('text_primary') : this.themeColor('text_disabled') }).height(29)
           Text('智能')
             .fontSize(11)
-            .fontColor(this.selectedTab === '智能' ? $r('app.color.text_primary') : $r('app.color.text_disabled'))
+            .fontColor(this.selectedTab === '智能' ? this.themeColor('text_primary') : this.themeColor('text_disabled'))
             .margin({ top: 0 })
         }
         .layoutWeight(1)
@@ -2262,8 +2485,8 @@ struct Index {
         .justifyContent(FlexAlign.Center)
         .onClick(() => { this.switchTab('智能'); })
         Column() {
-          Text('⚙').fontSize(21).fontColor(this.selectedTab === '设置' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).height(29).textAlign(TextAlign.Center)
-          Text('设置').fontSize(11).fontColor(this.selectedTab === '设置' ? $r('app.color.text_primary') : $r('app.color.text_disabled')).margin({ top: 0 })
+          Icon({ source: $r('app.media.icon_settings'), iconSize: 23, tint: this.selectedTab === '设置' ? this.themeColor('text_primary') : this.themeColor('text_disabled') }).height(29)
+          Text('设置').fontSize(11).fontColor(this.selectedTab === '设置' ? this.themeColor('text_primary') : this.themeColor('text_disabled')).margin({ top: 0 })
         }
         .layoutWeight(1)
         .height(60)
@@ -2273,8 +2496,9 @@ struct Index {
       .height(72)
       .width('100%')
       .padding({ left: 16, right: 16, bottom: 7 })
-      .backgroundColor($r('app.color.blur_bg_bar'))
-      .backgroundBlurStyle(BlurStyle.Thin)
+      .backgroundColor(this.themeColor('blur_bg_bar'))
+      .backdropBlur(18)
+      .border({ width: 1, color: this.themeColor('glass_border') })
       .borderRadius({ topLeft: 26, topRight: 26 })
 
       if (this.showProfileChangeWarning) {
@@ -2283,11 +2507,11 @@ struct Index {
             Text('切换使用方式？')
               .fontSize(21)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
               .alignSelf(ItemAlign.Start)
             Text(`切换到「${this.pendingProfileType}」会替换默认分类和默认整理规则，部分已归类文件可能会按新规则重新整理，原有归类可能被打散。自定义分类和用户规则会保留。`)
               .fontSize(13)
-              .fontColor($r('app.color.text_caption'))
+              .fontColor(this.themeColor('text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 18 })
             Row({ space: 10 }) {
@@ -2295,8 +2519,8 @@ struct Index {
                 .height(44)
                 .layoutWeight(1)
                 .fontSize(15)
-                .fontColor($r('app.color.text_body'))
-                .backgroundColor($r('app.color.tint_gray'))
+                .fontColor(this.themeColor('text_body'))
+                .backgroundColor(this.themeColor('tint_gray'))
                 .borderRadius(14)
                 .onClick(() => { this.cancelProfileChange(); })
               Button('继续切换')
@@ -2304,7 +2528,7 @@ struct Index {
                 .layoutWeight(1)
                 .fontSize(15)
                 .fontColor(Color.White)
-                .backgroundColor($r('app.color.accent_primary'))
+                .backgroundColor(this.themeColor('accent_primary'))
                 .borderRadius(14)
                 .onClick(() => { this.confirmProfileChange(); })
             }
@@ -2312,16 +2536,16 @@ struct Index {
           }
           .width('86%')
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(22)
-          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .shadow({ radius: 16, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 6 })
           .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor($r('app.color.mask'))
+        .backgroundColor(this.themeColor('mask'))
         .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
@@ -2331,11 +2555,11 @@ struct Index {
             Text('删除整理规则？')
               .fontSize(21)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
               .alignSelf(ItemAlign.Start)
             Text(`将删除「${this.ruleName}」这条规则。删除后不会删除分类和文件，但之后自动整理不会再使用这条规则。`)
               .fontSize(13)
-              .fontColor($r('app.color.text_caption'))
+              .fontColor(this.themeColor('text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 18 })
             Row({ space: 10 }) {
@@ -2343,8 +2567,8 @@ struct Index {
                 .height(44)
                 .layoutWeight(1)
                 .fontSize(15)
-                .fontColor($r('app.color.text_body'))
-                .backgroundColor($r('app.color.tint_gray'))
+                .fontColor(this.themeColor('text_body'))
+                .backgroundColor(this.themeColor('tint_gray'))
                 .borderRadius(14)
                 .onClick(() => { this.cancelDeleteRule(); })
               Button('确认删除')
@@ -2352,7 +2576,7 @@ struct Index {
                 .layoutWeight(1)
                 .fontSize(15)
                 .fontColor(Color.White)
-                .backgroundColor($r('app.color.accent_red'))
+                .backgroundColor(this.themeColor('accent_red'))
                 .borderRadius(14)
                 .onClick(() => { this.confirmDeleteRule(); })
             }
@@ -2360,16 +2584,16 @@ struct Index {
           }
           .width('86%')
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(22)
-          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .shadow({ radius: 16, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 6 })
           .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor($r('app.color.mask'))
+        .backgroundColor(this.themeColor('mask'))
         .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
@@ -2379,11 +2603,11 @@ struct Index {
             Text('删除标签？')
               .fontSize(21)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
               .alignSelf(ItemAlign.Start)
             Text(`将删除「${this.deletingCategoryName}」标签。该标签下的 ${this.categoryCount(this.deletingCategoryName)} 个文件会移入「待整理」，目标为该标签的整理规则也会一并移除。`)
               .fontSize(13)
-              .fontColor($r('app.color.text_caption'))
+              .fontColor(this.themeColor('text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 18 })
             Row({ space: 10 }) {
@@ -2391,8 +2615,8 @@ struct Index {
                 .height(44)
                 .layoutWeight(1)
                 .fontSize(15)
-                .fontColor($r('app.color.text_body'))
-                .backgroundColor($r('app.color.tint_gray'))
+                .fontColor(this.themeColor('text_body'))
+                .backgroundColor(this.themeColor('tint_gray'))
                 .borderRadius(14)
                 .onClick(() => { this.cancelDeleteCategory(); })
               Button('确认删除')
@@ -2400,7 +2624,7 @@ struct Index {
                 .layoutWeight(1)
                 .fontSize(15)
                 .fontColor(Color.White)
-                .backgroundColor($r('app.color.accent_red'))
+                .backgroundColor(this.themeColor('accent_red'))
                 .borderRadius(14)
                 .onClick(() => { this.confirmDeleteCategory(); })
             }
@@ -2408,16 +2632,16 @@ struct Index {
           }
           .width('86%')
           .padding({ left: 20, right: 20, top: 21, bottom: 18 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(22)
-          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .shadow({ radius: 16, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 6 })
           .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor($r('app.color.mask'))
+        .backgroundColor(this.themeColor('mask'))
         .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
@@ -2429,26 +2653,23 @@ struct Index {
                 Text('人工确认')
                   .fontSize(21)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.text_primary'))
+                  .fontColor(this.themeColor('text_primary'))
                 Text(`还有 ${this.pendingManualConfirmIds.length} 个文件规则无法判断`)
                   .fontSize(12)
-                  .fontColor($r('app.color.text_caption'))
+                  .fontColor(this.themeColor('text_caption'))
                   .margin({ top: 5 })
               }
               .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
-              Text('×')
-                .fontSize(24)
-                .fontColor($r('app.color.text_caption'))
+            Icon({ source: $r('app.media.icon_close'), iconSize: 20, tint: this.themeColor('text_caption') })
                 .width(34)
                 .height(34)
-                .textAlign(TextAlign.Center)
                 .onClick(() => { this.finishManualConfirmation(); })
             }
             .width('100%')
             Text('请选择合适分类；不确定的文件可以继续留在「待整理」，不会被自动覆盖。')
               .fontSize(13)
-              .fontColor($r('app.color.text_caption'))
+              .fontColor(this.themeColor('text_caption'))
               .lineHeight(20)
               .margin({ top: 12, bottom: 14 })
               .alignSelf(ItemAlign.Start)
@@ -2457,24 +2678,21 @@ struct Index {
                 ForEach(this.manualConfirmFiles(), (file: FileItem) => {
                   Column() {
                     Row() {
-                      Text(file.icon)
-                        .fontSize(15)
-                        .fontColor($r('app.color.accent_amber'))
+                      Icon({ source: this.iconResource(file.icon), iconSize: 15, tint: this.themeColor('accent_amber') })
                         .width(30)
                         .height(30)
-                        .textAlign(TextAlign.Center)
                         .backgroundColor(file.color)
                         .borderRadius(10)
                       Column() {
                         Text(file.name)
                           .fontSize(14)
                           .fontWeight(FontWeight.Medium)
-                          .fontColor($r('app.color.text_primary'))
+                          .fontColor(this.themeColor('text_primary'))
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                         Text(`${file.kind} · ${file.parseStatus}`)
                           .fontSize(11)
-                          .fontColor($r('app.color.text_caption'))
+                          .fontColor(this.themeColor('text_caption'))
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                           .margin({ top: 3 })
@@ -2490,7 +2708,7 @@ struct Index {
                           Text(category.name)
                             .fontSize(12)
                             .fontWeight(FontWeight.Medium)
-                            .fontColor($r('app.color.text_body'))
+                            .fontColor(this.themeColor('text_body'))
                             .padding({ left: 12, right: 12, top: 7, bottom: 7 })
                             .backgroundColor(category.color)
                             .borderRadius(13)
@@ -2501,9 +2719,9 @@ struct Index {
                       Text('保持待整理')
                         .fontSize(12)
                         .fontWeight(FontWeight.Medium)
-                        .fontColor($r('app.color.accent_amber'))
+                        .fontColor(this.themeColor('accent_amber'))
                         .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-                        .backgroundColor('#FFF0DD')
+                        .backgroundColor(this.themeColor('tint_amber'))
                         .borderRadius(13)
                         .margin({ right: 8, bottom: 8 })
                         .onClick(() => { this.chooseManualConfirmTag(file.id, '待整理'); })
@@ -2513,7 +2731,7 @@ struct Index {
                   }
                   .width('100%')
                   .padding({ left: 12, right: 12, top: 12, bottom: 8 })
-                  .backgroundColor($r('app.color.tint_gray'))
+                  .backgroundColor(this.themeColor('tint_gray'))
                   .borderRadius(14)
                 }, (file: FileItem) => `${file.id}-${file.tag}`)
               }
@@ -2525,24 +2743,24 @@ struct Index {
               .width('100%')
               .height(44)
               .fontSize(15)
-              .fontColor($r('app.color.text_body'))
-              .backgroundColor($r('app.color.tint_gray'))
+              .fontColor(this.themeColor('text_body'))
+              .backgroundColor(this.themeColor('tint_gray'))
               .borderRadius(15)
               .margin({ top: 16 })
               .onClick(() => { this.finishManualConfirmation(); })
           }
           .width('88%')
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(22)
-          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .shadow({ radius: 16, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 6 })
           .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor($r('app.color.mask'))
+        .backgroundColor(this.themeColor('mask'))
         .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
       }
 
@@ -2554,68 +2772,62 @@ struct Index {
                 Text('整理完成')
                   .fontSize(21)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.text_primary'))
+                  .fontColor(this.themeColor('text_primary'))
                 Text(`本次调整 ${this.lastOrganizeChangedCount} 个文件 · 已归类 ${this.lastOrganizedCount} 个`)
                   .fontSize(12)
-                  .fontColor($r('app.color.text_caption'))
+                  .fontColor(this.themeColor('text_caption'))
                   .margin({ top: 5 })
                 if (this.lastManualConfirmedCount > 0) {
                   Text(`其中人工确认 ${this.lastManualConfirmedCount} 个`)
                     .fontSize(12)
-                    .fontColor($r('app.color.accent_green'))
+                    .fontColor(this.themeColor('accent_green'))
                     .margin({ top: 4 })
                 }
               }
               .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
-              Text('×')
-                .fontSize(24)
-                .fontColor($r('app.color.text_caption'))
+              Icon({ source: $r('app.media.icon_close'), iconSize: 20, tint: this.themeColor('text_caption') })
                 .width(34)
                 .height(34)
-                .textAlign(TextAlign.Center)
                 .onClick(() => { this.showOrganizeSummary = false; })
             }
             .width('100%')
             Row() {
               Text('待整理')
                 .fontSize(13)
-                .fontColor($r('app.color.accent_amber'))
+                .fontColor(this.themeColor('accent_amber'))
               Blank()
               Text(`${this.categoryCount('待整理')} 项`)
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.accent_amber'))
+                .fontColor(this.themeColor('accent_amber'))
             }
             .width('100%')
             .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-            .backgroundColor('#FFF0DD')
+            .backgroundColor(this.themeColor('tint_amber'))
             .borderRadius(13)
             .margin({ top: 16, bottom: 10 })
             Column({ space: 8 }) {
               ForEach(this.categories, (category: CategoryItem) => {
                 if (category.name !== '待整理') {
                   Row() {
-                    Text(category.icon)
-                      .fontSize(15)
-                      .fontColor($r('app.color.accent_blue'))
+                    Icon({ source: this.iconResource(category.icon), iconSize: 15, tint: this.themeColor('accent_blue') })
                       .width(28)
                       .height(28)
-                      .textAlign(TextAlign.Center)
                       .backgroundColor(category.color)
                       .borderRadius(9)
                     Text(category.name)
                       .fontSize(13)
-                      .fontColor($r('app.color.text_body'))
+                      .fontColor(this.themeColor('text_body'))
                       .margin({ left: 9 })
                     Blank()
                     Text(`${this.categoryCount(category.name)} 项`)
                       .fontSize(13)
-                      .fontColor($r('app.color.text_caption'))
+                      .fontColor(this.themeColor('text_caption'))
                   }
                   .width('100%')
                   .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-                  .backgroundColor($r('app.color.tint_gray'))
+                  .backgroundColor(this.themeColor('tint_gray'))
                   .borderRadius(12)
                 }
               }, (category: CategoryItem) => category.name)
@@ -2627,7 +2839,7 @@ struct Index {
               .height(44)
               .fontSize(15)
               .fontColor(Color.White)
-              .backgroundColor($r('app.color.accent_primary'))
+              .backgroundColor(this.themeColor('accent_primary'))
               .borderRadius(15)
               .onClick(() => {
                 this.showOrganizeSummary = false;
@@ -2636,16 +2848,28 @@ struct Index {
           }
           .width('88%')
           .padding({ left: 18, right: 18, top: 18, bottom: 18 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('card_bg'))
           .borderRadius(22)
-          .shadow({ radius: 16, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 6 })
+          .shadow({ radius: 16, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 6 })
           .transition(TransitionEffect.scale({ x: 0.92, y: 0.92 }).animation({ duration: 250, curve: Curve.EaseOut }))
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.mask'))
+        .backgroundColor(this.themeColor('mask'))
         .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
+      }
+
+      // Bottom sheets share one animated backdrop. Keeping it as a sibling
+      // behind the sheet lets taps outside the sheet dismiss it without
+      // interfering with controls inside the sheet.
+      if (this.showFileAction || this.showFileDetail || this.showCategoryEditor || this.showRuleEditor || this.showQuickAdd) {
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor('#40000000')
+          .onClick(() => { this.dismissSheetPopups(); })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 220, curve: Curve.EaseOut }))
       }
 
       if (this.showFileAction) {
@@ -2654,23 +2878,21 @@ struct Index {
             Text('还没有归纳')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
             Blank()
-            Text('×')
-              .fontSize(23)
-              .fontColor($r('app.color.text_caption'))
+            Icon({ source: $r('app.media.icon_close'), iconSize: 20, tint: this.themeColor('text_caption') })
               .onClick(() => { this.showFileAction = false; })
           }
           .width('100%')
           Text(this.selectedFileName)
             .fontSize(15)
-            .fontColor($r('app.color.text_body'))
+            .fontColor(this.themeColor('text_body'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 13, bottom: 18 })
           Text('你可以先归入分类，也可以直接打开文件')
             .fontSize(13)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ bottom: 15 })
           Row({ space: 10 }) {
@@ -2679,7 +2901,7 @@ struct Index {
               .height(46)
               .fontSize(15)
               .fontColor(Color.White)
-              .backgroundColor($r('app.color.accent_primary'))
+              .backgroundColor(this.themeColor('accent_primary'))
               .borderRadius(15)
               .onClick(() => {
                 this.presentTagEditor(this.selectedFileId);
@@ -2688,8 +2910,8 @@ struct Index {
               .layoutWeight(1)
               .height(46)
               .fontSize(15)
-              .fontColor($r('app.color.accent_blue'))
-              .backgroundColor('#E9F0FF')
+              .fontColor(this.themeColor('accent_blue'))
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(15)
               .onClick(() => {
                 this.showFileAction = false;
@@ -2703,8 +2925,9 @@ struct Index {
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 26 })
-        .backgroundColor($r('app.color.blur_bg_sheet'))
-        .backgroundBlurStyle(BlurStyle.Thin)
+        .backgroundColor(this.themeColor('blur_bg_sheet'))
+        .backdropBlur(28)
+        .border({ width: 1, color: this.themeColor('glass_border') })
         .borderRadius({ topLeft: 26, topRight: 26 })
         .transition(TransitionEffect.OPACITY
           .combine(TransitionEffect.translate({ y: 200 }))
@@ -2717,11 +2940,9 @@ struct Index {
             Text('新建分类')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
             Blank()
-            Text('×')
-              .fontSize(23)
-              .fontColor($r('app.color.text_caption'))
+            Icon({ source: $r('app.media.icon_close'), iconSize: 20, tint: this.themeColor('text_caption') })
               .onClick(() => { this.showCategoryEditor = false; })
           }
           .width('100%')
@@ -2732,94 +2953,109 @@ struct Index {
             .onChange((value: string) => { this.newCategoryName = value; })
           Text('选择图标')
             .fontSize(13)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
           Row({ space: 12 }) {
-            Text('▤').fontSize(20).fontColor($r('app.color.accent_blue')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '▤' ? '#E9F0FF' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '▤'; })
-            Text('✦').fontSize(20).fontColor($r('app.color.accent_purple')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '✦' ? '#F3E9FF' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '✦'; })
-            Text('◇').fontSize(20).fontColor($r('app.color.accent_green')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◇' ? '#E5F7EF' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '◇'; })
-            Text('◉').fontSize(20).fontColor($r('app.color.accent_amber')).width(36).height(36).textAlign(TextAlign.Center).backgroundColor(this.newCategoryIcon === '◉' ? '#FFF0DD' : $r('app.color.tint_gray')).borderRadius(12).onClick(() => { this.newCategoryIcon = '◉'; })
+            Icon({ source: $r('app.media.icon_briefcase'), iconSize: 20, tint: this.themeColor('accent_blue') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'briefcase' ? '#E6EDF3' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'briefcase' ? 2 : 0, color: this.themeColor('accent_blue') }).onClick(() => { this.newCategoryIcon = 'briefcase'; })
+            Icon({ source: $r('app.media.icon_wand'), iconSize: 20, tint: this.themeColor('accent_purple') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'wand' ? '#EDE8EF' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'wand' ? 2 : 0, color: this.themeColor('accent_purple') }).onClick(() => { this.newCategoryIcon = 'wand'; })
+            Icon({ source: $r('app.media.icon_folder'), iconSize: 20, tint: this.themeColor('accent_green') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'folder' ? '#E7EEE9' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'folder' ? 2 : 0, color: this.themeColor('accent_green') }).onClick(() => { this.newCategoryIcon = 'folder'; })
+            Icon({ source: $r('app.media.icon_inbox_warning'), iconSize: 20, tint: this.themeColor('accent_amber') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'inbox-warning' ? '#F2E7E2' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'inbox-warning' ? 2 : 0, color: this.themeColor('accent_amber') }).onClick(() => { this.newCategoryIcon = 'inbox-warning'; })
+            Icon({ source: $r('app.media.icon_calendar'), iconSize: 20, tint: this.themeColor('accent_blue') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'calendar' ? '#E6EDF3' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'calendar' ? 2 : 0, color: this.themeColor('accent_blue') }).onClick(() => { this.newCategoryIcon = 'calendar'; })
+            Icon({ source: $r('app.media.icon_book'), iconSize: 20, tint: this.themeColor('accent_purple') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'book' ? '#EDE8EF' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'book' ? 2 : 0, color: this.themeColor('accent_purple') }).onClick(() => { this.newCategoryIcon = 'book'; })
+            Icon({ source: $r('app.media.icon_camera'), iconSize: 20, tint: this.themeColor('accent_green') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'camera' ? '#E7EEE9' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'camera' ? 2 : 0, color: this.themeColor('accent_green') }).onClick(() => { this.newCategoryIcon = 'camera'; })
+            Icon({ source: $r('app.media.icon_code'), iconSize: 20, tint: this.themeColor('accent_cyan') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'code' ? '#E7F0F0' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'code' ? 2 : 0, color: this.themeColor('accent_cyan') }).onClick(() => { this.newCategoryIcon = 'code'; })
+            Icon({ source: $r('app.media.icon_music'), iconSize: 20, tint: this.themeColor('accent_amber') }).width(36).height(36).backgroundColor(this.newCategoryIcon === 'music' ? '#FFF2E8' : this.themeColor('tint_gray')).borderRadius(12).border({ width: this.newCategoryIcon === 'music' ? 2 : 0, color: this.themeColor('accent_amber') }).onClick(() => { this.newCategoryIcon = 'music'; })
           }
           .width('100%')
           .margin({ top: 9, bottom: 14 })
           Text('选择颜色')
             .fontSize(13)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
           Row({ space: 14 }) {
-            Text(this.newCategoryColor === '#E9F0FF' ? '✓' : '')
-              .fontSize(15)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.accent_blue'))
-              .width(36)
-              .height(36)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#E9F0FF')
-              .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#E9F0FF' ? 2 : 0, color: $r('app.color.accent_blue') })
-              .onClick(() => { this.newCategoryColor = '#E9F0FF'; })
-            Text(this.newCategoryColor === '#F3E9FF' ? '✓' : '')
-              .fontSize(15)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.accent_purple'))
-              .width(36)
-              .height(36)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#F3E9FF')
-              .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#F3E9FF' ? 2 : 0, color: $r('app.color.accent_purple') })
-              .onClick(() => { this.newCategoryColor = '#F3E9FF'; })
-            Text(this.newCategoryColor === '#E5F7EF' ? '✓' : '')
-              .fontSize(15)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.accent_green'))
-              .width(36)
-              .height(36)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#E5F7EF')
-              .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#E5F7EF' ? 2 : 0, color: $r('app.color.accent_green') })
-              .onClick(() => { this.newCategoryColor = '#E5F7EF'; })
-            Text(this.newCategoryColor === '#FFF0DD' ? '✓' : '')
-              .fontSize(15)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.accent_amber'))
-              .width(36)
-              .height(36)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#FFF0DD')
-              .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#FFF0DD' ? 2 : 0, color: $r('app.color.accent_amber') })
-              .onClick(() => { this.newCategoryColor = '#FFF0DD'; })
-            Text(this.newCategoryColor === '#E7F5F8' ? '✓' : '')
-              .fontSize(15)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.accent_cyan'))
-              .width(36)
-              .height(36)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#E7F5F8')
-              .borderRadius(12)
-              .border({ width: this.newCategoryColor === '#E7F5F8' ? 2 : 0, color: $r('app.color.accent_cyan') })
-              .onClick(() => { this.newCategoryColor = '#E7F5F8'; })
+            Row() {
+              if (this.newCategoryColor === '#DDF5EE') {
+                Icon({ source: $r('app.media.icon_check'), iconSize: 17, tint: this.themeColor('accent_primary') })
+              }
+            }
+            .width(40)
+            .height(40)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .backgroundColor('#DDF5EE')
+            .borderRadius(12)
+            .border({ width: this.newCategoryColor === '#DDF5EE' ? 2 : 0, color: this.themeColor('accent_primary') })
+            .onClick(() => { this.newCategoryColor = '#DDF5EE'; })
+            Row() {
+              if (this.newCategoryColor === '#E9E6F8') {
+                Icon({ source: $r('app.media.icon_check'), iconSize: 17, tint: this.themeColor('accent_purple') })
+              }
+            }
+            .width(40)
+            .height(40)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .backgroundColor('#E9E6F8')
+            .borderRadius(12)
+            .border({ width: this.newCategoryColor === '#E9E6F8' ? 2 : 0, color: this.themeColor('accent_purple') })
+            .onClick(() => { this.newCategoryColor = '#E9E6F8'; })
+            Row() {
+              if (this.newCategoryColor === '#E4F3EC') {
+                Icon({ source: $r('app.media.icon_check'), iconSize: 17, tint: this.themeColor('accent_green') })
+              }
+            }
+            .width(40)
+            .height(40)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .backgroundColor('#E4F3EC')
+            .borderRadius(12)
+            .border({ width: this.newCategoryColor === '#E4F3EC' ? 2 : 0, color: this.themeColor('accent_green') })
+            .onClick(() => { this.newCategoryColor = '#E4F3EC'; })
+            Row() {
+              if (this.newCategoryColor === '#FFF0E4') {
+                Icon({ source: $r('app.media.icon_check'), iconSize: 17, tint: this.themeColor('accent_amber') })
+              }
+            }
+            .width(40)
+            .height(40)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .backgroundColor('#FFF0E4')
+            .borderRadius(12)
+            .border({ width: this.newCategoryColor === '#FFF0E4' ? 2 : 0, color: this.themeColor('accent_amber') })
+            .onClick(() => { this.newCategoryColor = '#FFF0E4'; })
+            Row() {
+              if (this.newCategoryColor === '#DFF2F4') {
+                Icon({ source: $r('app.media.icon_check'), iconSize: 17, tint: this.themeColor('accent_blue') })
+              }
+            }
+            .width(40)
+            .height(40)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .backgroundColor('#DFF2F4')
+            .borderRadius(12)
+            .border({ width: this.newCategoryColor === '#DFF2F4' ? 2 : 0, color: this.themeColor('accent_blue') })
+            .onClick(() => { this.newCategoryColor = '#DFF2F4'; })
           }
           .width('100%')
           .margin({ top: 8, bottom: 17 })
           Row() {
             Text('筛选条件')
               .fontSize(13)
-              .fontColor($r('app.color.text_body'))
+              .fontColor(this.themeColor('text_body'))
             Blank()
             Text(this.showCategoryRuleOptions ? '收起' : '展开')
               .fontSize(12)
-              .fontColor($r('app.color.accent_blue'))
+              .fontColor(this.themeColor('accent_blue'))
               .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-              .backgroundColor('#E9F0FF')
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(12)
           }
           .width('100%')
           .padding({ left: 12, right: 12, top: 11, bottom: 11 })
-          .backgroundColor($r('app.color.tint_gray'))
+          .backgroundColor(this.themeColor('tint_gray'))
           .borderRadius(14)
           .margin({ bottom: this.showCategoryRuleOptions ? 9 : 17 })
           .onClick(() => { this.showCategoryRuleOptions = !this.showCategoryRuleOptions; })
@@ -2836,7 +3072,7 @@ struct Index {
                 .onChange((value: string) => { this.newCategoryFormats = value; })
               Text('保存后会同步加入“智能”的整理规则，自定义规则不会随使用方式切换而改变')
                 .fontSize(10)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .alignSelf(ItemAlign.Start)
                 .margin({ top: 6 })
             }
@@ -2848,14 +3084,15 @@ struct Index {
             .height(46)
             .fontSize(15)
             .fontColor(Color.White)
-            .backgroundColor($r('app.color.accent_primary'))
+              .backgroundColor(this.themeColor('accent_primary'))
             .borderRadius(15)
             .onClick(() => { this.addCategory(); })
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 25 })
-        .backgroundColor($r('app.color.blur_bg_sheet'))
-        .backgroundBlurStyle(BlurStyle.Thin)
+        .backgroundColor(this.themeColor('blur_bg_sheet'))
+        .backdropBlur(28)
+        .border({ width: 1, color: this.themeColor('glass_border') })
         .borderRadius({ topLeft: 26, topRight: 26 })
         .transition(TransitionEffect.OPACITY
           .combine(TransitionEffect.translate({ y: 200 }))
@@ -2869,17 +3106,15 @@ struct Index {
               Text(this.editingRuleId > 0 ? '编辑整理规则' : '新建整理规则')
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
               Text('填写的条件需同时满足，逗号分隔表示任一匹配')
                 .fontSize(11)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
-            Text('×')
-              .fontSize(23)
-              .fontColor($r('app.color.text_caption'))
+            Icon({ source: $r('app.media.icon_close'), iconSize: 20, tint: this.themeColor('text_caption') })
               .onClick(() => { this.showRuleEditor = false; })
           }
           .width('100%')
@@ -2900,7 +3135,7 @@ struct Index {
             .onChange((value: string) => { this.ruleFormats = value; })
           Text('整理到')
             .fontSize(12)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
             .margin({ top: 11, bottom: 7 })
           Scroll() {
@@ -2909,9 +3144,9 @@ struct Index {
                 if (category.name !== '待整理') {
                   Text(category.name)
                     .fontSize(12)
-                    .fontColor(this.ruleTargetTag === category.name ? Color.White : $r('app.color.text_body'))
+                    .fontColor(this.ruleTargetTag === category.name ? Color.White : this.themeColor('text_body'))
                     .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-                    .backgroundColor(this.ruleTargetTag === category.name ? $r('app.color.accent_blue') : $r('app.color.tint_gray'))
+                    .backgroundColor(this.ruleTargetTag === category.name ? this.themeColor('accent_blue') : this.themeColor('tint_gray'))
                     .borderRadius(13)
                     .onClick(() => { this.ruleTargetTag = category.name; })
                 }
@@ -2926,7 +3161,7 @@ struct Index {
             .height(46)
             .fontSize(15)
             .fontColor(Color.White)
-            .backgroundColor($r('app.color.accent_primary'))
+              .backgroundColor(this.themeColor('accent_primary'))
             .borderRadius(15)
             .margin({ top: 15 })
             .onClick(() => { this.saveCustomRule(); })
@@ -2935,8 +3170,8 @@ struct Index {
               .width('100%')
               .height(42)
               .fontSize(14)
-              .fontColor($r('app.color.accent_red'))
-              .backgroundColor($r('app.color.tint_red'))
+              .fontColor(this.themeColor('accent_red'))
+              .backgroundColor(this.themeColor('tint_red'))
               .borderRadius(14)
               .margin({ top: 10 })
               .onClick(() => { this.requestDeleteRule(); })
@@ -2944,8 +3179,9 @@ struct Index {
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 23 })
-        .backgroundColor($r('app.color.blur_bg_sheet'))
-        .backgroundBlurStyle(BlurStyle.Thin)
+        .backgroundColor(this.themeColor('blur_bg_sheet'))
+        .backdropBlur(28)
+        .border({ width: 1, color: this.themeColor('glass_border') })
         .borderRadius({ topLeft: 26, topRight: 26 })
         .transition(TransitionEffect.OPACITY
           .combine(TransitionEffect.translate({ y: 200 }))
@@ -2958,32 +3194,27 @@ struct Index {
             Text('添加文件')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
             Blank()
-            Text('×')
-              .fontSize(23)
-              .fontColor($r('app.color.text_caption'))
+            Icon({ source: $r('app.media.icon_close'), iconSize: 20, tint: this.themeColor('text_caption') })
               .onClick(() => { this.showQuickAdd = false; })
           }
           .width('100%')
           Row() {
-            Text('↗')
-              .fontSize(22)
-              .fontColor($r('app.color.accent_blue'))
+            Icon({ source: $r('app.media.icon_file'), iconSize: 20, tint: this.themeColor('accent_blue') })
               .width(34)
               .height(34)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#E9F0FF')
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(12)
             Column() {
               Text(this.selectedUris.length > 1 ? `${this.newFileName} 等 ${this.selectedUris.length} 个文件` : this.newFileName.length > 0 ? this.newFileName : '从设备批量选择文件')
                 .fontSize(15)
-                .fontColor($r('app.color.text_primary'))
+                .fontColor(this.themeColor('text_primary'))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
               Text(this.selectedUris.length > 0 ? `已选择 ${this.selectedUris.length} 个，可再次选择继续添加` : '长按第一个文件进入多选，最多 100 个')
                 .fontSize(12)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
@@ -2991,22 +3222,22 @@ struct Index {
             .margin({ left: 10 })
             Text('›')
               .fontSize(24)
-              .fontColor($r('app.color.text_caption'))
+              .fontColor(this.themeColor('text_caption'))
           }
           .width('100%')
           .height(66)
           .padding({ left: 12, right: 12 })
-          .backgroundColor($r('app.color.tint_gray'))
+          .backgroundColor(this.themeColor('tint_gray'))
           .borderRadius(16)
           .margin({ top: 18, bottom: 14 })
           .onClick(() => { this.selectFile(); })
           if (this.selectedUris.length > 0) {
-            Button('+ 继续添加文件')
+              Button('继续添加文件')
               .width('100%')
               .height(44)
               .fontSize(14)
-              .fontColor($r('app.color.accent_blue'))
-              .backgroundColor('#E9F0FF')
+              .fontColor(this.themeColor('accent_blue'))
+              .backgroundColor(this.themeColor('tint_blue'))
               .borderRadius(14)
               .margin({ bottom: 10 })
               .enabled(!this.isIndexing)
@@ -3016,16 +3247,16 @@ struct Index {
               Text('系统浏览不支持多选？')
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.text_body'))
+                .fontColor(this.themeColor('text_body'))
               Text('可以每次选择一个，再用“继续添加文件”逐个累加；也可以从系统文件应用多选后分享至“拾序”。')
                 .fontSize(11)
-                .fontColor($r('app.color.text_caption'))
+                .fontColor(this.themeColor('text_caption'))
                 .margin({ top: 5 })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)
             .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-            .backgroundColor('#E9F0FF')
+            .backgroundColor(this.themeColor('tint_blue'))
             .borderRadius(13)
             .margin({ bottom: 12 })
           }
@@ -3034,15 +3265,16 @@ struct Index {
             .height(48)
             .fontSize(16)
             .fontColor(Color.White)
-            .backgroundColor($r('app.color.accent_primary'))
+              .backgroundColor(this.themeColor('accent_primary'))
             .borderRadius(16)
             .enabled(!this.isIndexing)
             .onClick(() => { this.addFile(); })
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 24 })
-        .backgroundColor($r('app.color.blur_bg_sheet'))
-        .backgroundBlurStyle(BlurStyle.Thin)
+        .backgroundColor(this.themeColor('blur_bg_sheet'))
+        .backdropBlur(28)
+        .border({ width: 1, color: this.themeColor('glass_border') })
         .borderRadius({ topLeft: 26, topRight: 26 })
         .transition(TransitionEffect.OPACITY
           .combine(TransitionEffect.translate({ y: 200 }))
@@ -3055,42 +3287,37 @@ struct Index {
             Text('文件标签')
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
+              .fontColor(this.themeColor('text_primary'))
             Blank()
-            Text('×')
-              .fontSize(23)
-              .fontColor($r('app.color.text_caption'))
+            Icon({ source: $r('app.media.icon_close'), iconSize: 20, tint: this.themeColor('text_caption') })
               .onClick(() => { this.showFileDetail = false; })
           }
           .width('100%')
           Text(this.selectedFileName)
             .fontSize(15)
-            .fontColor($r('app.color.text_body'))
+            .fontColor(this.themeColor('text_body'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 14, bottom: 10 })
           Text('选择一个标签')
             .fontSize(13)
-            .fontColor($r('app.color.text_caption'))
+            .fontColor(this.themeColor('text_caption'))
             .alignSelf(ItemAlign.Start)
           Column({ space: 9 }) {
             ForEach(this.categories, (category: CategoryItem) => {
               Row() {
-                Text(category.icon)
-                  .fontSize(16)
-                  .fontColor($r('app.color.accent_blue'))
+                Icon({ source: this.iconResource(category.icon), iconSize: 16, tint: this.themeColor('accent_blue') })
                   .width(26)
                   .height(26)
-                  .textAlign(TextAlign.Center)
                   .backgroundColor(category.color)
                   .borderRadius(9)
                 Text(category.name)
                   .fontSize(13)
-                  .fontColor($r('app.color.text_body'))
+                  .fontColor(this.themeColor('text_body'))
                   .margin({ left: 9 })
               }
               .padding({ left: 12, right: 14, top: 8, bottom: 8 })
-              .backgroundColor($r('app.color.tint_gray'))
+              .backgroundColor(this.themeColor('tint_gray'))
               .borderRadius(14)
               .onClick(() => { this.retagSelected(category.name); })
             }, (category: CategoryItem) => category.name)
@@ -3100,8 +3327,9 @@ struct Index {
         }
         .width('100%')
         .padding({ left: 22, right: 22, top: 20, bottom: 26 })
-        .backgroundColor($r('app.color.blur_bg_sheet'))
-        .backgroundBlurStyle(BlurStyle.Thin)
+        .backgroundColor(this.themeColor('blur_bg_sheet'))
+        .backdropBlur(28)
+        .border({ width: 1, color: this.themeColor('glass_border') })
         .borderRadius({ topLeft: 26, topRight: 26 })
         .transition(TransitionEffect.OPACITY
           .combine(TransitionEffect.translate({ y: 200 }))
@@ -3115,26 +3343,24 @@ struct Index {
               LoadingProgress()
                 .width(16)
                 .height(16)
-                .color($r('app.color.accent_blue'))
+                .color(this.themeColor('accent_blue'))
             } else {
-              Text(this.scanStatusType === 'error' ? '!' : '✓')
-                .fontSize(13)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.scanStatusType === 'error' ? $r('app.color.accent_red') : $r('app.color.accent_green'))
+              Icon({ source: this.scanStatusType === 'error' ? $r('app.media.icon_alert') : $r('app.media.icon_check'), iconSize: 16, tint: this.scanStatusType === 'error' ? this.themeColor('accent_red') : this.themeColor('accent_green') })
                 .width(16)
                 .height(16)
-                .textAlign(TextAlign.Center)
             }
             Text(this.scanStatus)
               .fontSize(13)
-              .fontColor($r('app.color.text_body'))
+              .fontColor(this.themeColor('text_body'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .padding({ left: 16, right: 18, top: 10, bottom: 10 })
-          .backgroundColor($r('app.color.card_bg'))
+          .backgroundColor(this.themeColor('blur_bg_toast'))
+          .backdropBlur(14)
+          .border({ width: 1, color: this.themeColor('glass_border') })
           .borderRadius(20)
-          .shadow({ radius: 12, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 4 })
+          .shadow({ radius: 16, color: this.themeColor('shadow_card'), offsetX: 0, offsetY: 4 })
           .constraintSize({ maxWidth: '82%' })
         }
         .width('100%')

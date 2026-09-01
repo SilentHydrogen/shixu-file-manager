@@ -15,5 +15,9 @@
     { "name": "radius_lg", "value": "20vp" },
     { "name": "radius_xl", "value": "24vp" },
     { "name": "radius_pill", "value": "999vp" }
+    ,{ "name": "page_padding", "value": "22vp" }
+    ,{ "name": "radius_card", "value": "18vp" }
+    ,{ "name": "radius_header", "value": "26vp" }
+    ,{ "name": "bottom_nav_height", "value": "82vp" }
   ]
 }
