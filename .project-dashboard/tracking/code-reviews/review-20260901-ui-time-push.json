@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260901-ui-time-push",
+  "taskId": null,
+  "sessionId": "session-20260901-ui-time-push",
+  "status": "approved_with_notes",
+  "whatChanged": "完成主页面视觉重构、主题色切换、语义化 SVG 图标与组件接入、卡片视觉更新，并将文件列表时间改为按时间戳显示当天时分或历史日期；同步更新构建配置和资源文档。",
+  "why": "交付用户要求的 UI 与时间显示修改，并将实现与资源、主题配置一并纳入远程分支。",
+  "risk": "ArkTS/HarmonyOS 构建和设备级 UI 验证未完成，需在 DevEco Studio 环境复核。",
+  "validation": [
+    "git fetch origin --prune：通过",
+    "git merge-base --is-ancestor HEAD origin/main：通过",
+    "git diff --check：通过",
+    "tracking 目录 JSON 解析校验：通过",
+    "git push -u origin codex/ui-refactor：通过",
+    "最终 git status：工作区干净并跟踪 origin/codex/ui-refactor",
+    "HarmonyOS 构建：未验证，当前 PATH 未找到 hvigor/devecocli"
+  ],
+  "followUps": [
+    "在 DevEco Studio 或配置 hvigor 后执行 entry 模块构建和设备预览"
+  ],
+  "changedFiles": [
+    "build-profile.json5",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/model/WidgetTheme.ets",
+    "entry/src/main/ets/components/Icon.ets",
+    "entry/src/main/ets/quickcategories/pages/QuickCategoriesWidgetCard.ets",
+    "entry/src/main/ets/recentfiles/pages/RecentFilesWidgetCard.ets",
+    "entry/src/main/resources/base/element/color.json",
+    "entry/src/main/resources/base/element/float.json",
+    "entry/src/main/resources/base/media/*.svg",
+    "prototype/index.html"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-09-01T22:01:00+08:00"
+}
