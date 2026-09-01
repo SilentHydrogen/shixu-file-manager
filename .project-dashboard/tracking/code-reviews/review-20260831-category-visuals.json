@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-category-visuals",
+  "taskId": null,
+  "sessionId": "session-20260831-category-visuals",
+  "status": "approved_with_notes",
+  "whatChanged": "分类卡片改为顶部全宽色彩图像区和底部信息区；智能页头部改为全宽视觉区；Icon 映射新增 8 种语义图标；新建分类图标选择扩充到 9 种。",
+  "why": "解决视觉内容只占容器左上角小区域的问题，使分类和智能页面拥有更接近参考图的完整、明确视觉焦点。",
+  "risk": "大尺寸图标在极窄设备或较长分类名称下仍需截图验收；新增图标仅为线性 SVG，没有外部网络加载。",
+  "validation": [
+    "git diff --check 通过",
+    "Hvigor assembleHap 构建成功"
+  ],
+  "followUps": [
+    "在 390vp、412vp 和平板尺寸检查卡片高度与文字截断",
+    "如需真实插画，可在确认版权后替换视觉区 SVG，但不改变布局契约"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/resources/base/media/icon_*.svg"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T00:00:00+08:00"
+}

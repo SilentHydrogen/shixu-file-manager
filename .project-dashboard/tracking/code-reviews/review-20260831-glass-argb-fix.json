@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-glass-argb-fix",
+  "taskId": null,
+  "sessionId": "session-20260831-glass-argb-fix",
+  "status": "approved_with_notes",
+  "whatChanged": "将 Index.ets 中玻璃节点切换为 backdropBlur，并修正导航栏、底部弹层和状态提示玻璃颜色为 HarmonyOS ARGB 顺序。",
+  "why": "backgroundBlurStyle 与非透明 backgroundColor 的组合会让材质不符合预期；原有颜色末尾 alpha 被当作 RGB 蓝色通道，导致背景接近不透明黄色。",
+  "risk": "仍需设备端确认不同系统版本对 backdropBlur 半径和透明叠加的渲染差异。",
+  "validation": [
+    "Hvigor assembleHap 构建成功",
+    "ArkTS 编译通过，仅保留既有弃用和异常处理警告",
+    "玻璃节点均使用 backdropBlur，玻璃 token 均使用 #AARRGGBB"
+  ],
+  "followUps": [
+    "在模拟器或真机截图确认后景内容确实发生扩散模糊",
+    "若仍偏黄，优先微调玻璃背景 RGB 与 alpha，不回退到 backgroundBlurStyle"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T23:58:00+08:00"
+}

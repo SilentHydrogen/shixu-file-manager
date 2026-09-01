@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-summary-time-display",
+  "taskId": null,
+  "sessionId": "session-20260831-summary-time-display",
+  "status": "approved_with_notes",
+  "whatChanged": "文件列表不再直接展示固定的归纳文案，而是根据归纳/导入时间戳格式化显示；重新归纳时会刷新归纳时间。",
+  "why": "让近期归纳记录快速显示时分，较早记录显示完整日期，避免所有文件都显示“刚刚归纳”。",
+  "risk": "ArkTS/HarmonyOS 构建工具未安装或未在当前 PATH 中，尚未完成设备级构建验证。",
+  "validation": [
+    "git diff --check：通过",
+    "日期格式逻辑样例：当天输出 HH:mm，前一天输出 yyyy.MM.dd",
+    "已检查时间戳字段、自动归纳、人工确认和列表渲染路径",
+    "HarmonyOS 构建：未验证，环境未找到 hvigor/devecocli"
+  ],
+  "followUps": [
+    "在 DevEco Studio 或配置 hvigor 后执行一次 entry 模块构建"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T23:15:00+08:00"
+}

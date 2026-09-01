@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "session-20260831-category-smart-rollback",
+  "codexThreadId": null,
+  "status": "completed",
+  "objective": "按用户反馈恢复智能页上一版布局，并将分类项恢复为左侧小方框图标布局。",
+  "startedAt": "2026-08-31T00:00:00+08:00",
+  "endedAt": "2026-08-31T00:00:00+08:00",
+  "steps": [
+    "恢复智能页紧凑标题行与右侧小图标",
+    "恢复分类卡片横向列表和左侧小方框图标",
+    "保留新增自定义图标类型",
+    "运行 Hvigor 构建验证"
+  ],
+  "commands": [
+    "git diff --check",
+    "D:\\DevEco Studio\\tools\\hvigor\\bin\\hvigorw.bat assembleHap --no-daemon --no-parallel"
+  ],
+  "decisions": [
+    "智能页和分类页的本次变化仅调整布局，不改变数据、点击和规则行为",
+    "扩充的本地图标资源继续保留在新建分类选择器中"
+  ],
+  "changedFiles": ["entry/src/main/ets/pages/Index.ets"],
+  "result": "智能页和分类页按用户指定回退，构建成功。",
+  "blockers": ["尚未在真机/模拟器截图验收。"],
+  "linkedTaskIds": [],
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T00:00:00+08:00",
+  "updatedAt": "2026-08-31T00:00:00+08:00"
+}

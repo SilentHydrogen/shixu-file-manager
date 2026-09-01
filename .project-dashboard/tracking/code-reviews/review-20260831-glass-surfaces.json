@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-glass-surfaces",
+  "taskId": null,
+  "sessionId": "session-20260831-glass-surfaces",
+  "status": "approved_with_notes",
+  "whatChanged": "集中更新三套主题的玻璃背景 token；导航栏保留 Thin 模糊并增加描边，五类底部弹层改用 Thick 模糊并增加描边，扫描状态提示改用半透明胶囊背景和 Thin 模糊。",
+  "why": "建立稳定玻璃、厚玻璃、胶囊玻璃三种层级，让透明度与真实背景模糊共同形成层次，而不是只依赖不透明色块。",
+  "risk": "高斯模糊的实际强度和性能依赖设备 GPU 与系统版本；低对比度背景下仍需设备端检查文字可读性。",
+  "validation": [
+    "Hvigor assembleHap 构建成功",
+    "ArkTS 编译通过；仅报告 Index.ets 中既有弃用和异常处理警告",
+    "git diff --check 未发现本次改动引入的格式错误"
+  ],
+  "followUps": [
+    "在模拟器或真机上检查导航栏、弹层和状态提示的真实模糊效果",
+    "如底部弹层过亮或过暗，优先调整 blur_bg_sheet 的 alpha，不改变模糊层级"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T23:28:00+08:00"
+}

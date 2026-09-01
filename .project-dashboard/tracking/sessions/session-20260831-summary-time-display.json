@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "session-20260831-summary-time-display",
+  "codexThreadId": null,
+  "status": "completed",
+  "objective": "优化文件归纳时间显示，避免所有记录显示为“刚刚归纳”",
+  "startedAt": "2026-08-31T23:10:00+08:00",
+  "endedAt": "2026-08-31T23:15:00+08:00",
+  "steps": [
+    "检查文件列表时间字段与归纳流程",
+    "创建 codex/fix-summary-time-display 分支",
+    "增加按当天时间/历史日期格式化的显示逻辑并调整日期列宽",
+    "让重新归纳操作更新时间戳并完成静态检查"
+  ],
+  "commands": [
+    "git status --short --branch",
+    "rg -n \"刚刚归纳|归纳|时间|timestamp|date|format\" . --glob '!**/build/**' --glob '!**/.gradle/**'",
+    "git switch -c codex/fix-summary-time-display",
+    "git diff --check"
+  ],
+  "decisions": [
+    "列表优先使用 organizedAt，待整理文件使用 importedAt",
+    "当天显示 HH:mm，较早记录显示 yyyy.MM.dd",
+    "自动归纳仅在分类发生变化或首次归纳时刷新 organizedAt"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "result": "已完成时间显示优化；工作区原有未提交改动保持不变",
+  "blockers": [
+    "当前环境未发现 hvigor/devecocli 构建命令，未执行 HarmonyOS 构建"
+  ],
+  "linkedTaskIds": [],
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T23:15:00+08:00",
+  "updatedAt": "2026-08-31T23:17:00+08:00"
+}

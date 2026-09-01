@@ -1,4 +1,5 @@
 import { WidgetCategory } from '../../model/WidgetData';
+import { widgetThemeColor } from '../../model/WidgetTheme';
 
 let storage = new LocalStorage();
 
@@ -6,9 +7,14 @@ let storage = new LocalStorage();
 @Component
 struct QuickCategoriesWidgetCard {
   private readonly abilityName: string = 'EntryAbility';
+  @LocalStorageProp('skinTheme') skinTheme: string = 'teal';
   @LocalStorageProp('totalCount') totalCount: number = 0;
   @LocalStorageProp('pendingCount') pendingCount: number = 0;
   @LocalStorageProp('categoryList') categoryList: WidgetCategory[] = [];
+
+  private color(name: string): string {
+    return widgetThemeColor(this.skinTheme, name);
+  }
 
   build() {
     Column() {
@@ -17,21 +23,21 @@ struct QuickCategoriesWidgetCard {
           Text('快捷分类')
             .fontSize($r('app.float.font_size_body_lg'))
             .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.widget_text_primary'))
+            .fontColor(this.color('text_primary'))
           Text(this.totalCount > 0 ? `收纳箱 · ${this.totalCount} 项` : '还没有整理文件')
             .fontSize($r('app.float.font_size_micro'))
-            .fontColor($r('app.color.widget_text_body'))
+            .fontColor(this.color('text_body'))
             .margin({ top: 4 })
         }
         .alignItems(HorizontalAlign.Start)
         Blank()
         Text('✧')
           .fontSize($r('app.float.font_size_md'))
-          .fontColor($r('app.color.widget_accent_blue'))
+          .fontColor(this.color('accent_blue'))
           .width(34)
           .height(34)
           .textAlign(TextAlign.Center)
-          .backgroundColor($r('app.color.widget_tint_blue'))
+          .backgroundColor(this.color('widget_tint_secondary'))
           .borderRadius($r('app.float.radius_sm'))
       }
       .width('100%')
@@ -39,7 +45,7 @@ struct QuickCategoriesWidgetCard {
         ForEach(this.categoryList, (category: WidgetCategory) => {
           Text(`${category.name} ${category.count}`)
             .fontSize($r('app.float.font_size_micro'))
-            .fontColor($r('app.color.widget_accent_blue'))
+            .fontColor(this.color('accent_blue'))
             .padding({ left: 11, right: 11, top: 9, bottom: 9 })
             .backgroundColor(category.color)
             .borderRadius($r('app.float.radius_sm'))
@@ -47,9 +53,9 @@ struct QuickCategoriesWidgetCard {
         }, (category: WidgetCategory) => category.name)
         Text(`待整理 ${this.pendingCount}`)
           .fontSize($r('app.float.font_size_micro'))
-          .fontColor($r('app.color.widget_accent_amber'))
+          .fontColor(this.color('accent_amber'))
           .padding({ left: 11, right: 11, top: 9, bottom: 9 })
-          .backgroundColor($r('app.color.widget_tint_amber'))
+          .backgroundColor(this.color('widget_tint'))
           .borderRadius($r('app.float.radius_sm'))
           .margin({ right: 8, bottom: 8 })
       }
@@ -59,7 +65,7 @@ struct QuickCategoriesWidgetCard {
     .width('100%')
     .height('100%')
     .padding(18)
-    .backgroundColor($r('app.color.widget_bg'))
+    .backgroundColor(this.color('widget_bg'))
     .backgroundBlurStyle(BlurStyle.Thick)
     .border({ width: 1, color: $r('app.color.border_glass'), radius: 24 })
     .shadow({ radius: 18, color: $r('app.color.shadow_widget'), offsetX: 0, offsetY: 7 })

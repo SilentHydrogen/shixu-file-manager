@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "review-20260831-popup-dismiss",
+  "taskId": null,
+  "sessionId": "session-20260831-popup-dismiss",
+  "status": "approved_with_notes",
+  "whatChanged": "在 Index.ets 的底部弹层区域新增共享全屏遮罩，并新增 dismissSheetPopups() 统一关闭文件操作、文件标签、自定义分类、整理规则和添加文件弹层。",
+  "why": "让未归纳文件和自定义分类等底部弹层打开时有轻微背景层次，同时支持点击弹层外部快速退出，保持与移动端常见交互一致。",
+  "risk": "尚未在设备上验证透明遮罩的实际灰度、触摸命中区域和转场帧率；确认类弹窗仍不支持点击外部关闭，这是为避免误取消危险操作的有意取舍。",
+  "validation": [
+    "git diff --check 通过",
+    "确认遮罩节点位于底部弹层之前，弹层内容位于其上方",
+    "确认遮罩仅在五类底部弹层任一打开时渲染",
+    "Hvigor assembleHap 构建成功；仅有 Index.ets 中既有弃用和异常处理警告"
+  ],
+  "followUps": [
+    "在模拟器或真机上验证打开、外部点击关闭和弹层内部按钮操作",
+    "如设备视觉反馈仍偏暗，可将遮罩透明度从 0x40 调整至 0x30"
+  ],
+  "changedFiles": [
+    "entry/src/main/ets/pages/Index.ets"
+  ],
+  "reviewedBy": "Technical Director",
+  "generatedBy": "project-execution-technical-management",
+  "generatedAt": "2026-08-31T23:15:00+08:00"
+}

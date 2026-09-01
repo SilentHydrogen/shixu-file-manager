@@ -1,0 +1,14 @@
+{
+  "riskId": "risk-20260830-ui-refactor-device-validation",
+  "kind": "validation",
+  "severity": "medium",
+  "status": "open",
+  "title": "设备尺寸与真实交互尚未完成视觉回归",
+  "impact": "构建成功不能保证 390vp、412vp、平板尺寸下的底部导航、弹层和文本布局完全符合预期。",
+  "owner": "开发者",
+  "mitigation": "在模拟器或真机运行应用，按计划截图检查布局、点击区域、键盘和底部面板遮挡；发现问题后再调整 Token 或组件边界。",
+  "dueAt": null,
+  "linkedTaskIds": [],
+  "linkedFiles": ["entry/src/main/ets/pages/Index.ets", "prototype/index.html"],
+  "updatedAt": "2026-08-30T00:00:00+08:00"
+}
