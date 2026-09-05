@@ -66,20 +66,6 @@ export class KeywordExpansionService {
     return Array.from(expanded)
   }
 
-  async classify(text: string): Promise<string> {
-    if (!this.model.isAvailable()) return '待整理'
-    const candidates: KeywordEmbedding[] = await this.repository.list()
-    if (candidates.length === 0) return '待整理'
-    const vector: number[] = await this.model.encode(text)
-    let category: string = '待整理'
-    let score: number = 0.45
-    for (const candidate of candidates) {
-      const similarity: number = this.cosine(vector, candidate.embedding)
-      if (similarity > score) { score = similarity; category = candidate.category }
-    }
-    return category
-  }
-
   /**
    * Build one persisted vector lexicon for every actual category in the UI.
    * Preset rules and built-in synonyms seed preset lexicons; all other
