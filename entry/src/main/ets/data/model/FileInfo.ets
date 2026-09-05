@@ -16,6 +16,7 @@ export class FileInfo {
   processedTime?: number
   contentSummary?: string
   extractedKeywords?: string[]
+  category: string = '待整理'
 
   /**
    * 从数据库行转换为 FileInfo
@@ -35,6 +36,7 @@ export class FileInfo {
     fileInfo.processedTime = row.processed_time as number
     fileInfo.contentSummary = row.content_summary as string
     fileInfo.extractedKeywords = row.extracted_keywords ? JSON.parse(row.extracted_keywords as string) as string[] : []
+    fileInfo.category = (row.category as string) || '待整理'
     return fileInfo
   }
 
@@ -57,6 +59,7 @@ export class FileInfo {
     if (this.processedTime) values.processed_time = this.processedTime
     if (this.contentSummary) values.content_summary = this.contentSummary
     if (this.extractedKeywords) values.extracted_keywords = JSON.stringify(this.extractedKeywords)
+    values.category = this.category
 
     return values
   }

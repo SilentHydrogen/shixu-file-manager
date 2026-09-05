@@ -8,22 +8,16 @@ export interface StructuredFileAnalysis extends FileAnalysisResult {
 }
 
 export function parseFileAnalysis(content: string): StructuredFileAnalysis {
-  const jsonText: string = content.trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '')
-  let value: Object
+  const jsonText: string = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+  let data: Record<string, Object>
   try {
-    value = JSON.parse(jsonText) as Object
+    data = JSON.parse(jsonText) as Record<string, Object>
   } catch (error) {
     throw new Error('LLM response is not valid JSON')
   }
-  const data: Record<string, Object> = value as Record<string, Object>
-  if (typeof data.summary !== 'string'
-    || !Array.isArray(data.keywords)
-    || typeof data.suggestedCategory !== 'string'
-    || typeof data.confidence !== 'number'
-    || typeof data.reason !== 'string'
-    || typeof data.insufficientContent !== 'boolean') {
+  if (typeof data.summary !== 'string' || !Array.isArray(data.keywords)
+    || typeof data.suggestedCategory !== 'string' || typeof data.confidence !== 'number'
+    || typeof data.reason !== 'string' || typeof data.insufficientContent !== 'boolean') {
     throw new Error('LLM response is missing required analysis fields')
   }
   const keywords: string[] = (data.keywords as Object[])

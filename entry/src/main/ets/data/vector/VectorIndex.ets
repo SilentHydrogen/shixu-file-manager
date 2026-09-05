@@ -28,7 +28,7 @@ export class VectorIndex {
 
     this.index.clear()
     for (const emb of embeddings) {
-      this.index.set(emb.fileId, emb.embedding)
+      if (emb.embedding.length > 0) this.index.set(emb.fileId, emb.embedding)
     }
 
     this.isBuilt = true
@@ -38,7 +38,7 @@ export class VectorIndex {
    * 向索引中添加新向量
    */
   addToIndex(fileId: number, embedding: number[]): void {
-    this.index.set(fileId, embedding)
+    if (embedding.length > 0) this.index.set(fileId, embedding)
   }
 
   /**
@@ -64,6 +64,7 @@ export class VectorIndex {
     while (!entry.done) {
       const fileId = entry.value[0]
       const embedding = entry.value[1]
+      if (queryVector.length !== embedding.length) { entry = iterator.next(); continue }
       const score = this.cosineSimilarity(queryVector, embedding)
       const result: SearchResult = { fileId, score }
       results.push(result)
@@ -84,11 +85,14 @@ export class VectorIndex {
     }
 
     let dotProduct = 0
+    let normA = 0
+    let normB = 0
     for (let i = 0; i < a.length; i++) {
       dotProduct += a[i] * b[i]
+      normA += a[i] * a[i]
+      normB += b[i] * b[i]
     }
-
-    return dotProduct
+    return dotProduct / ((Math.sqrt(normA) * Math.sqrt(normB)) || 1)
   }
 
   /**

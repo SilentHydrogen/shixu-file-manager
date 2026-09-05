@@ -1,100 +1,23 @@
-// entry/src/main/ets/llm/PromptTemplates.ets
-
 import { RelevantContext } from './LLMTypes'
 
-/**
- * 提示词模板管理
- */
 export class PromptTemplates {
-  /**
-   * 文件摘要提示词
-   */
   static fileSummary(fileName: string, fileType: string, content: string): string {
-    return `请为以下文件生成简洁的摘要（不超过200字）：
-
-文件名：${fileName}
-文件类型：${fileType}
-内容：
-${content.substring(0, 2000)}
-
-请用中文生成摘要，重点说明文件的主要内容和用途。
-
-摘要：`
+    return `请为以下文件生成简洁摘要（不超过200字）：\n文件名：${fileName}\n文件类型：${fileType}\n内容：\n${content}\n请用中文回答。`
   }
-
-  /**
-   * 关键词提取提示词
-   */
   static extractKeywords(content: string): string {
-    return `从以下文本中提取3-5个最重要的关键词：
-
-${content.substring(0, 1000)}
-
-请只返回关键词，用逗号分隔，不要有其他内容。
-
-关键词：`
+    return `从以下文本提取3-5个最重要关键词，只返回逗号分隔结果：\n${content}`
   }
-
-  /**
-   * 文件分类提示词
-   */
   static categorizeFile(fileName: string, content: string): string {
-    return `请为以下文件选择一个合适的分类：
-
-文件名：${fileName}
-内容预览：
-${content.substring(0, 500)}
-
-可选分类：文档、代码、图片、视频、音频、压缩包、配置文件、数据文件、其他
-
-请只返回一个分类名称，不要有其他内容。
-
-分类：`
+    return `请为文件选择分类，只返回一个分类名称。\n文件名：${fileName}\n内容：${content}\n可选：文档、代码、图片、视频、音频、压缩包、配置文件、数据文件、其他`
   }
-
-  /**
-   * 结构化文件分析提示词。
-   */
   static analyzeFile(fileName: string, fileType: string, content: string, categories: string[]): string {
-    const categoryText: string = categories.join('、')
-    return `请分析文件并严格只返回 JSON，不要 Markdown：
-{"summary":"不超过200字的摘要","keywords":["3-5个关键词"],"suggestedCategory":"必须从可选分类选择","confidence":0.0,"reason":"分类理由","insufficientContent":false}
-文件名：${fileName}
-文件类型：${fileType}
-可选分类：${categoryText}
-本地提取内容（仅片段）：
-${content.substring(0, 8000)}
-若内容不足，设置 insufficientContent=true；未知分类只能返回“待整理”。`
+    return `请分析文件并严格只返回 JSON，不要 Markdown：{"summary":"摘要","keywords":["关键词"],"suggestedCategory":"可选分类","confidence":0.0,"reason":"理由","insufficientContent":false}\n文件名：${fileName}\n文件类型：${fileType}\n可选分类：${categories.join('、')}\n本地提取内容：\n${content}\n未知分类返回“待整理”。`
   }
-
-  /**
-   * RAG 问答提示词
-   */
   static ragQA(question: string, relevantFiles: RelevantContext[]): string {
-    const filesContext = relevantFiles
-      .map((file, index) => `文件${index + 1}：${file.name}\n内容：${file.content.substring(0, 1600)}`)
-      .join('\n\n')
-
-    return `你是一个智能文件管理助手。请基于以下相关文件内容回答用户的问题。
-
-相关文件：
-${filesContext}
-
-用户问题：${question}
-
-请用中文回答，如果文件内容不足以回答问题，请诚实地说明。
-
-回答：`
+    const context: string = relevantFiles.map((file, index) => `文件${index + 1}：${file.name}\n内容：${file.content}`).join('\n\n')
+    return `请基于相关文件回答问题。资料不足时明确说明，不要猜测。\n相关文件：\n${context}\n用户问题：${question}`
   }
-
-  /**
-   * 系统提示词
-   */
   static systemPrompt(): string {
-    return `你是一个智能文件管理助手，专门帮助用户分析和管理文件。你的回答应该：
-1. 简洁明了，重点突出
-2. 使用中文
-3. 基于提供的文件内容
-4. 如果信息不足，诚实说明`
+    return '你是智能文件管理助手。使用中文，基于给定文件内容回答，信息不足时诚实说明。'
   }
 }

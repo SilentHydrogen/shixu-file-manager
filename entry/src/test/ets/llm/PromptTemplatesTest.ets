@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from '@ohos/hypium'
 import { PromptTemplates } from '../../../main/ets/llm/PromptTemplates'
+import { RelevantContext } from '../../../main/ets/llm/LLMTypes'
 
 export default function promptTemplatesTest() {
   describe('PromptTemplates', () => {
@@ -28,7 +29,7 @@ export default function promptTemplatesTest() {
     })
 
     it('should generate RAG QA prompt', 0, () => {
-      const files = [
+      const files: RelevantContext[] = [
         { name: 'file1.txt', content: 'Content 1' },
         { name: 'file2.txt', content: 'Content 2' }
       ]

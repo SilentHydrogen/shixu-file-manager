@@ -4,13 +4,24 @@ export class DatabaseSchema {
    */
   static getCreateTableSQLs(): string[] {
     return [
+      DatabaseSchema.createSchemaMetaTable(),
       DatabaseSchema.createFilesTable(),
       DatabaseSchema.createCollectionsTable(),
       DatabaseSchema.createFileCollectionRefsTable(),
       DatabaseSchema.createVectorStorageTiersTable(),
       DatabaseSchema.createRagAnalysisLogsTable(),
-      DatabaseSchema.createFileEmbeddingsTable()
+      DatabaseSchema.createFileEmbeddingsTable(),
+      DatabaseSchema.createKeywordEmbeddingsTable()
     ]
+  }
+
+  private static createSchemaMetaTable(): string {
+    return `
+      CREATE TABLE IF NOT EXISTS schema_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `
   }
 
   private static createFilesTable(): string {
@@ -28,7 +39,8 @@ export class DatabaseSchema {
         is_processed INTEGER DEFAULT 0,
         processed_time INTEGER,
         content_summary TEXT,
-        extracted_keywords TEXT
+        extracted_keywords TEXT,
+        category TEXT DEFAULT '待整理'
       )
     `
   }
@@ -103,6 +115,18 @@ export class DatabaseSchema {
     `
   }
 
+  private static createKeywordEmbeddingsTable(): string {
+    return `
+      CREATE TABLE IF NOT EXISTS keyword_embeddings (
+        keyword TEXT PRIMARY KEY,
+        category TEXT NOT NULL,
+        synonyms TEXT NOT NULL,
+        embedding_vector TEXT NOT NULL,
+        updated_time INTEGER NOT NULL
+      )
+    `
+  }
+
   /**
    * 获取创建索引的 SQL 语句
    */
@@ -112,7 +136,8 @@ export class DatabaseSchema {
       'CREATE INDEX IF NOT EXISTS idx_files_is_processed ON files(is_processed)',
       'CREATE INDEX IF NOT EXISTS idx_file_collection_refs_file_id ON file_collection_refs(file_id)',
       'CREATE INDEX IF NOT EXISTS idx_file_collection_refs_collection_id ON file_collection_refs(collection_id)',
-      'CREATE INDEX IF NOT EXISTS idx_vector_storage_tiers_tier ON vector_storage_tiers(tier)'
+      'CREATE INDEX IF NOT EXISTS idx_vector_storage_tiers_tier ON vector_storage_tiers(tier)',
+      'CREATE INDEX IF NOT EXISTS idx_keyword_embeddings_category ON keyword_embeddings(category)'
     ]
   }
 }

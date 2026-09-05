@@ -14,6 +14,7 @@ export class FileProcessingQueue {
    * 添加任务到队列
    */
   enqueue(fileId: number, priority: number = 0): void {
+    if (this.queue.some((task: QueueTask) => task.fileId === fileId)) return
     const task: QueueTask = {
       fileId,
       priority,
@@ -43,6 +44,10 @@ export class FileProcessingQueue {
    */
   clear(): void {
     this.queue = []
+  }
+  dequeueBatch(limit: number = 20): QueueTask[] {
+    const safeLimit: number = Math.max(0, Math.min(20, limit))
+    return this.queue.splice(0, safeLimit)
   }
 
   /**

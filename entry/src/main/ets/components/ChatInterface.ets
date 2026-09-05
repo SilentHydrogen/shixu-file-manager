@@ -1,14 +1,19 @@
 // entry/src/main/ets/components/ChatInterface.ets
 
 import { RagAnalysisService } from '../service/RagAnalysisService'
-import { QAResult, RelevantFile } from '../llm/LLMTypes'
+import { QAResult, RelevantFile, LLMMessage } from '../llm/LLMTypes'
+
+import { LLMService } from '../llm/LLMService'
+import { describeLLMError } from '../llm/OpenAIClient'
 
 interface RelevantFileRef {
+  fileId: number
   fileName: string
   similarity: number
 }
-
 interface ChatMessage {
+  id: number
+  mode: boolean
   role: 'user' | 'assistant'
   content: string
   timestamp: number
@@ -17,23 +22,43 @@ interface ChatMessage {
 
 @Component
 export struct ChatInterface {
+  @Prop useFiles: boolean = true
+  private nextMessageId: number = 0
+  @State retryText: string = ''
   @State messages: ChatMessage[] = []
   @State inputText: string = ''
   @State isLoading: boolean = false
   @State errorMessage: string = ''
-  private ragService: RagAnalysisService = new RagAnalysisService()
+  // Reuse singleton initialized by EntryAbility so local embedding/vector index stay available.
+  private ragService: RagAnalysisService = RagAnalysisService.getInstance()
   private scroller: Scroller = new Scroller()
 
   build() {
     Column() {
+      if (this.messages.filter((message: ChatMessage) => message.mode === this.useFiles).length === 0) {
+        Column({ space: 12 }) {
+          Text(this.useFiles ? $r('app.string.ai_chat_welcome') : $r('app.string.ai_chat_plain_welcome'))
+            .fontSize(24).fontWeight(FontWeight.Bold).fontColor($r('app.color.text_primary'))
+          Text(this.useFiles ? $r('app.string.ai_chat_hint') : $r('app.string.ai_chat_plain_hint'))
+            .fontSize(14).fontColor($r('app.color.text_body'))
+          if (this.useFiles) {
+            Button($r('app.string.ai_chat_example_work')).fontSize(13)
+              .backgroundColor($r('app.color.card_bg')).fontColor($r('app.color.accent_blue'))
+              .onClick(() => this.inputText = '帮我查找与工作相关的文件')
+            Button($r('app.string.ai_chat_example_study')).fontSize(13)
+              .backgroundColor($r('app.color.card_bg')).fontColor($r('app.color.accent_blue'))
+              .onClick(() => this.inputText = '学习资料里有哪些重要内容？')
+          }
+        }.width('100%').alignItems(HorizontalAlign.Start).padding(24)
+      }
       // 聊天消息列表
       List({ scroller: this.scroller }) {
-        ForEach(this.messages, (message: ChatMessage, index: number) => {
+        ForEach(this.messages.filter((message: ChatMessage) => message.mode === this.useFiles), (message: ChatMessage) => {
           ListItem() {
             this.MessageBubble(message)
           }
           .margin({ bottom: 12 })
-        }, (message: ChatMessage, index: number) => `${index}_${message.timestamp}`)
+        }, (message: ChatMessage) => `${message.id}`)
       }
       .layoutWeight(1)
       .padding({ left: 16, right: 16, top: 16 })
@@ -56,11 +81,14 @@ export struct ChatInterface {
       // 错误提示
       if (this.errorMessage) {
         Row() {
-          Text(`❌ ${this.errorMessage}`)
+          Text(this.errorMessage)
             .fontSize(14)
             .fontColor(Color.Red)
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+          Button('重试').enabled(!this.isLoading).onClick(() => {
+            this.inputText = this.retryText
+            this.sendMessage()
+          })
         }
         .padding(12)
         .width('100%')
@@ -69,7 +97,7 @@ export struct ChatInterface {
 
       // 输入框
       Row() {
-        TextInput({ placeholder: '输入问题...', text: this.inputText })
+        TextInput({ placeholder: this.useFiles ? '问问你的文件…' : '输入消息…', text: this.inputText }).id('chatInput')
           .layoutWeight(1)
           .onChange((value: string) => {
             this.inputText = value
@@ -78,7 +106,7 @@ export struct ChatInterface {
             this.sendMessage()
           })
 
-        Button('发送')
+        Button('发送').id('chatSend').backgroundColor($r('app.color.accent_primary'))
           .width(80)
           .height(40)
           .margin({ left: 8 })
@@ -88,7 +116,7 @@ export struct ChatInterface {
           })
       }
       .padding(16)
-      .backgroundColor('#F8F9FA')
+      .backgroundColor($r('app.color.card_bg'))
     }
     .width('100%')
     .height('100%')
@@ -105,19 +133,19 @@ export struct ChatInterface {
               .fontSize(15)
               .fontColor('#FFFFFF')
               .padding(12)
-              .backgroundColor('#007AFF')
+              .backgroundColor($r('app.color.accent_blue'))
               .borderRadius(12)
               .maxLines(100)
           }
           .alignItems(HorizontalAlign.End)
-          .constraintSize({ maxWidth: '70%' })
+          .constraintSize({ maxWidth: '88%' })
         } else {
           Column() {
             Text(message.content)
               .fontSize(15)
               .fontColor('#000000')
               .padding(12)
-              .backgroundColor('#E9ECEF')
+              .backgroundColor($r('app.color.card_bg'))
               .borderRadius(12)
               .maxLines(100)
 
@@ -140,14 +168,14 @@ export struct ChatInterface {
                       .fontColor('#999999')
                   }
                   .width('100%')
-                })
+                }, (file: RelevantFileRef) => `${file.fileId}-${file.fileName}`)
               }
               .alignItems(HorizontalAlign.Start)
               .padding({ top: 4, left: 12, right: 12, bottom: 8 })
             }
           }
           .alignItems(HorizontalAlign.Start)
-          .constraintSize({ maxWidth: '70%' })
+          .constraintSize({ maxWidth: '88%' })
 
           Blank().layoutWeight(1)
         }
@@ -169,7 +197,10 @@ export struct ChatInterface {
       return
     }
 
+    const mode = this.useFiles
     const userMessage: ChatMessage = {
+      id: ++this.nextMessageId,
+      mode: mode,
       role: 'user',
       content: this.inputText.trim(),
       timestamp: Date.now()
@@ -187,14 +218,22 @@ export struct ChatInterface {
 
     try {
       // 调用 RAG 服务
-      const result: QAResult = await this.ragService.askQuestion(userMessage.content)
+      const history: LLMMessage[] = this.messages.filter((message: ChatMessage) => message.mode === mode)
+        .slice(-12).map((message: ChatMessage): LLMMessage => ({ role: message.role, content: message.content }))
+      const result: QAResult = mode ? await this.ragService.askQuestion(userMessage.content) : {
+        answer: (await LLMService.getInstance().generate({ messages: history })).content,
+        relevantFiles: [], confidence: 0
+      }
 
       const assistantMessage: ChatMessage = {
+        id: ++this.nextMessageId,
+        mode: mode,
         role: 'assistant',
         content: result.answer,
         timestamp: Date.now(),
         relevantFiles: result.relevantFiles.map((f: RelevantFile): RelevantFileRef => {
           const ref: RelevantFileRef = {
+            fileId: f.fileId,
             fileName: f.fileName,
             similarity: f.similarity
           }
@@ -210,8 +249,9 @@ export struct ChatInterface {
       }, 100)
 
     } catch (err) {
-      this.errorMessage = `错误: ${JSON.stringify(err)}`
-      console.error('Chat error:', JSON.stringify(err))
+      this.errorMessage = describeLLMError(err)
+      this.retryText = userMessage.content
+      this.messages = this.messages.filter((message: ChatMessage) => message.id !== userMessage.id)
     } finally {
       this.isLoading = false
     }

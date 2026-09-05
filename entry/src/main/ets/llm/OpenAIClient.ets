@@ -1,93 +1,25 @@
-import http from '@ohos.net.http'
-import { LLMConfig } from './LLMConfig'
-import { LLMRequest, LLMResponse, LLMMessage } from './LLMTypes'
+import { LLMProtocol } from './LLMTypes'
 
-interface OpenAIMessage {
-  content?: string
-}
-
-interface OpenAIChoice {
-  message?: OpenAIMessage
-  finish_reason?: string
-}
-
-interface OpenAIUsage {
-  total_tokens?: number
-}
-
-interface OpenAIChatResponse {
-  model?: string
-  choices?: OpenAIChoice[]
-  usage?: OpenAIUsage
-}
-
-interface ChatRequestBody {
-  model: string
-  messages: LLMMessage[]
-  max_tokens: number
-  temperature: number
-  stream: boolean
-}
-
-export class OpenAIClient {
-  private config: LLMConfig
-
-  constructor(config: LLMConfig) {
-    this.config = {
-      apiKey: config.apiKey,
-      baseURL: config.baseURL,
-      model: config.model,
-      maxTokens: config.maxTokens,
-      temperature: config.temperature
-    }
+export function resolveLLMEndpoint(baseURL: string, protocol: LLMProtocol): string {
+  const base = baseURL.trim().replace(/\/+$/, '')
+  if (!/^https?:\/\/[^\s/?#]+(?:\/[^\s?#]*)?$/.test(base)) {
+    throw new Error('请输入有效的 http:// 或 https:// API 地址，不要附带查询参数')
   }
-
-  async chat(request: LLMRequest): Promise<LLMResponse> {
-    const httpRequest = http.createHttp()
-    try {
-      const requestBody: ChatRequestBody = {
-        model: request.model ?? this.config.model,
-        messages: request.messages,
-        max_tokens: request.maxTokens ?? this.config.maxTokens,
-        temperature: request.temperature ?? this.config.temperature,
-        stream: false
-      }
-      const response = await httpRequest.request(
-        `${this.config.baseURL}/chat/completions`,
-        {
-          method: http.RequestMethod.POST,
-          header: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.config.apiKey}`
-          },
-          extraData: JSON.stringify(requestBody),
-          expectDataType: http.HttpDataType.STRING,
-          connectTimeout: 30000,
-          readTimeout: 60000
-        }
-      )
-      if (response.responseCode < 200 || response.responseCode >= 300) {
-        throw new Error(`LLM request failed with status ${response.responseCode}`)
-      }
-      const result: OpenAIChatResponse = JSON.parse(response.result as string) as OpenAIChatResponse
-      const choice = result.choices === undefined ? undefined : result.choices[0]
-      const content: string | undefined = choice?.message?.content
-      if (content === undefined) {
-        throw new Error('LLM response did not contain message content')
-      }
-      return {
-        content: content,
-        tokens: result.usage?.total_tokens ?? 0,
-        finishReason: choice?.finish_reason ?? 'stop',
-        model: result.model ?? this.config.model
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error
-      }
-      throw new Error('LLM request failed')
-    } finally {
-      httpRequest.destroy()
-    }
+  if ((base.endsWith('/responses') && protocol === 'chat_completions') ||
+    (base.endsWith('/chat/completions') && protocol === 'responses')) {
+    throw new Error('API 地址与协议不一致，请选择自动协议或修改地址')
   }
+  if (base.endsWith('/chat/completions') || base.endsWith('/responses')) return base
+  return `${base}/${protocol === 'responses' ? 'responses' : 'chat/completions'}`
+}
+
+export function describeLLMError(error: Object): string {
+  const code = (error as Record<string, Object>).code
+  if (code === 201) return '网络权限不足，请安装包含网络权限的新版应用（201）'
+  if (code === 2300006) return '域名解析失败，请检查 API 地址和手机网络（2300006）'
+  if (code === 2300007) return '无法连接提供商，请检查服务端口和手机网络（2300007）'
+  if (code === 2300028) return '提供商响应超时，请稍后重试（2300028）'
+  if (code === 2300060) return '证书校验失败，请检查提供商 HTTPS 证书（2300060）'
+  if (error instanceof Error) return error.message
+  return typeof code === 'number' ? `网络请求失败（${code}），请检查手机网络和提供商地址` : '请求失败，请稍后重试'
 }

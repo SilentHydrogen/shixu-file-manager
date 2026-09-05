@@ -4,47 +4,16 @@ import preferences from '@ohos.data.preferences';
 import zlib from '@ohos.zlib';
 import curves from '@ohos.curves';
 import { common } from '@kit.AbilityKit';
+import router from '@ohos.router';
 import { image } from '@kit.ImageKit';
 import { textRecognition } from '@kit.CoreVisionKit';
 import { pdfService } from '@kit.PDFKit';
+import { FileInfo } from '../data/model/FileInfo';
+import { FileRepository } from '../data/repository/FileRepository';
+import { RagAnalysisService } from '../service/RagAnalysisService';
 
-interface CategoryItem {
-  name: string;
-  color: string;
-  icon: string;
-  subtitle: string;
-}
-
-interface FileItem {
-  id: number;
-  name: string;
-  kind: string;
-  size: string;
-  updated: string;
-  tag: string;
-  color: string;
-  icon: string;
-  uri: string;
-  extension: string;
-  contentText: string;
-  parseStatus: string;
-  parseSource: string;
-  manualTag: boolean;
-  importedAt: number;
-  organizedAt: number;
-}
-
-interface SmartRule {
-  id: number;
-  name: string;
-  titleKeywords: string;
-  contentKeywords: string;
-  formats: string;
-  targetTag: string;
-  enabled: boolean;
-  isDefault: boolean;
-}
-
+import { CategoryItem, FileItem, SmartRule } from '../data/model/FileBoxTypes';
+import { ruleMatches, matchingCategories, organizeByRules, applyCategory } from '../service/ClassificationRules';
 interface ContentExtraction {
   text: string;
   status: string;
@@ -57,6 +26,7 @@ struct Index {
   private preferenceStore: preferences.Preferences | undefined = undefined;
   @StorageLink('pendingSharedUris') @Watch('onPendingSharedUrisChanged') pendingSharedUris: string = '';
   @StorageLink('pendingCardRoute') @Watch('onPendingCardRouteChanged') pendingCardRoute: string = '';
+  @StorageLink('classificationRevision') @Watch('refreshClassifiedFiles') classificationRevision: number = 0;
   @State query: string = '';
   @State selectedFilter: string = '全部';
   @State selectedTab: string = '收纳箱';
@@ -102,6 +72,7 @@ struct Index {
   @State lastManualConfirmedCount: number = 0;
   @State pendingManualConfirmIds: number[] = [];
   @State isIndexing: boolean = false;
+  @StorageLink('llmConfigured') llmConfigured: boolean = false;
   @State pressedFileId: number = 0;
   @State sortingRuleId: number = 0;
   @State ruleListRevision: number = 0;
@@ -147,6 +118,7 @@ struct Index {
             parseStatus: file.parseStatus === undefined ? '未读取正文' : file.parseStatus,
             parseSource: file.parseSource === undefined ? 'API 未调用' : file.parseSource,
             manualTag: file.manualTag === undefined ? false : file.manualTag,
+            aiCategory: file.aiCategory,
             importedAt: file.importedAt === undefined ? 0 : file.importedAt,
             organizedAt: file.organizedAt === undefined ? 0 : file.organizedAt
           };
@@ -186,6 +158,20 @@ struct Index {
       this.scanStatus = '等待导入';
       this.scanStatusType = 'idle';
     }
+  }
+
+  onPageShow(): void { this.refreshClassifiedFiles(); }
+
+  private refreshClassifiedFiles(): void {
+    if (this.preferenceStore === undefined) return;
+    try {
+      const raw = this.preferenceStore.getSync('files', '[]') as string;
+      const saved = JSON.parse(raw) as FileItem[];
+      if (JSON.stringify(this.files) !== JSON.stringify(saved)) {
+        this.files = saved;
+        this.fileListRevision++;
+      }
+    } catch (error) { this.flashScanStatus('error', '整理结果读取失败'); }
   }
 
   private onPendingSharedUrisChanged(): void {
@@ -264,12 +250,14 @@ struct Index {
         parseStatus: file.parseStatus,
         parseSource: file.parseSource,
         manualTag: file.manualTag,
+        aiCategory: file.aiCategory,
         importedAt: file.importedAt,
         organizedAt: file.organizedAt
       };
       return savedFile;
     });
     try {
+      AppStorage.setOrCreate('fileBoxFiles', JSON.stringify(savedFiles));
       this.preferenceStore.putSync('files', JSON.stringify(savedFiles));
       this.preferenceStore.putSync('rules', JSON.stringify(this.rules));
       this.preferenceStore.putSync('categories', JSON.stringify(this.categories));
@@ -912,16 +900,7 @@ struct Index {
   }
 
   private ruleMatches(file: FileItem, rule: SmartRule): boolean {
-    if (!rule.enabled) {
-      return false;
-    }
-    const hasCondition: boolean = rule.titleKeywords.length > 0 || rule.formats.length > 0;
-    const extension: string = file.extension.length > 0
-      ? file.extension.toLowerCase()
-      : this.extensionFromName(file.name);
-    return hasCondition
-      && this.fieldMatches(file.name, rule.titleKeywords)
-      && this.fieldMatches(extension, rule.formats);
+    return ruleMatches(file, rule);
   }
 
   private matchingRuleFor(file: FileItem): SmartRule | undefined {
@@ -934,14 +913,7 @@ struct Index {
   }
 
   private matchingTargetTags(file: FileItem): string[] {
-    const categoryNames: string[] = this.categories.map((category: CategoryItem) => category.name);
-    const targetTags: string[] = [];
-    this.matchingRulesFor(file).forEach((rule: SmartRule) => {
-      if (categoryNames.includes(rule.targetTag) && !targetTags.includes(rule.targetTag)) {
-        targetTags.push(rule.targetTag);
-      }
-    });
-    return targetTags;
+    return matchingCategories(file, this.rules, this.categories);
   }
 
   private needsManualConfirmation(file: FileItem): boolean {
@@ -970,40 +942,7 @@ struct Index {
   }
 
   private organizeFile(file: FileItem): FileItem {
-    const categoryNames: string[] = this.categories.map((category: CategoryItem) => category.name);
-    const hasCurrentCategory: boolean = categoryNames.includes(file.tag);
-    const keepManualTag: boolean = file.manualTag && hasCurrentCategory && file.tag !== '待整理';
-    const extension: string = file.extension.length > 0
-      ? file.extension.toLowerCase()
-      : this.extensionFromName(file.name);
-    let targetTag: string = keepManualTag ? file.tag : '待整理';
-    if (this.autoOrganize && !keepManualTag) {
-      const targetTags: string[] = this.matchingTargetTags(file);
-      const matched: SmartRule | undefined = targetTags.length === 1 ? this.matchingRuleFor(file) : undefined;
-      if (matched !== undefined && categoryNames.includes(matched.targetTag) && targetTags.length === 1) {
-        targetTag = matched.targetTag;
-      }
-    }
-    const category: CategoryItem = this.categoryByName(targetTag);
-    const organizedFile: FileItem = {
-      id: file.id,
-      name: file.name,
-      kind: file.kind,
-      size: file.size,
-      updated: file.updated,
-      tag: targetTag,
-      color: category.color,
-      icon: category.icon,
-      uri: file.uri,
-      extension: extension,
-      contentText: file.contentText,
-      parseStatus: file.parseStatus,
-      parseSource: file.parseSource,
-      manualTag: keepManualTag,
-      importedAt: file.importedAt,
-      organizedAt: targetTag !== '待整理' && file.organizedAt === 0 ? Date.now() : file.organizedAt
-    };
-    return organizedFile;
+    return organizeByRules(file, this.rules, this.categories, this.autoOrganize);
   }
 
   private applySmartRules(): void {
@@ -1061,24 +1000,7 @@ struct Index {
     this.files = this.files.map((file: FileItem) => {
       if (file.id === fileId) {
         changed = file.tag !== tag;
-        const updatedFile: FileItem = {
-          id: file.id,
-          name: file.name,
-          kind: file.kind,
-          size: file.size,
-          updated: tag === '待整理' ? file.updated : '刚刚归纳',
-          tag: tag,
-          color: category.color,
-          icon: category.icon,
-          uri: file.uri,
-          extension: file.extension,
-          contentText: file.contentText,
-          parseStatus: file.parseStatus,
-          parseSource: file.parseSource,
-          manualTag: tag !== '待整理',
-          importedAt: file.importedAt,
-          organizedAt: tag !== '待整理' && file.organizedAt === 0 ? Date.now() : file.organizedAt
-        };
+        const updatedFile = applyCategory(file, category, tag !== '待整理');
         return updatedFile;
       }
       return file;
@@ -1495,6 +1417,7 @@ struct Index {
         this.flashScanStatus('progress', `正在导入 ${index + 1}/${this.selectedUris.length}`);
         const name: string = this.fileNameFromUri(uri);
         const extension: string = this.extensionFromName(name);
+        const extraction: ContentExtraction = await this.extractContent(uri, extension);
         const pending: CategoryItem = this.categoryByName('待整理');
         const newFile: FileItem = {
           id: Date.now() + index,
@@ -1507,9 +1430,9 @@ struct Index {
           icon: pending.icon,
           uri: uri,
           extension: extension,
-          contentText: '',
-          parseStatus: '未读取正文',
-          parseSource: 'API 未调用',
+          contentText: extraction.text,
+          parseStatus: extraction.status,
+          parseSource: extraction.source,
           manualTag: false,
           importedAt: Date.now(),
           organizedAt: 0
@@ -1524,6 +1447,31 @@ struct Index {
     this.selectedFilter = '全部';
     this.isIndexing = false;
     this.applySmartRules();
+    for (const file of newFiles) {
+      this.registerForRag(file).catch(() => {});
+    }
+  }
+
+  private async registerForRag(file: FileItem): Promise<void> {
+    const repository = new FileRepository();
+    const existing = await repository.findByUri(file.uri);
+    if (existing !== null && existing.id !== undefined) {
+      await repository.updateCategory(existing.id, file.tag);
+      if (!existing.isProcessed) await RagAnalysisService.getInstance().processFile(existing.id, file.contentText);
+      return;
+    }
+    const info = new FileInfo();
+    info.uri = file.uri;
+    info.name = file.name;
+    info.type = file.extension.length > 0 ? file.extension : file.kind;
+    try { info.size = fs.statSync(file.uri).size; } catch (error) { info.size = 0; }
+    info.path = file.uri;
+    info.createdTime = file.importedAt;
+    info.modifiedTime = file.importedAt;
+    info.contentSummary = file.contentText;
+    info.category = file.tag;
+    const fileId: number = await repository.insert(info);
+    await RagAnalysisService.getInstance().processFile(fileId, file.contentText);
   }
 
   private selectFile(): void {
@@ -2134,6 +2082,33 @@ struct Index {
           .borderRadius(22)
           .margin({ left: 20, right: 20, bottom: 22 })
           .shadow({ radius: 8, color: $r('app.color.shadow_card'), offsetX: 0, offsetY: 2 })
+          Row({ space: 8 }) {
+            Button('AI 整理')
+              .fontSize(12)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.accent_primary'))
+              .borderRadius(12)
+              .onClick(() => router.pushUrl({ url: 'pages/AIOrganizePage' }))
+            Button('文件问答')
+              .fontSize(12)
+              .fontColor($r('app.color.accent_blue'))
+              .backgroundColor('#E9F0FF')
+              .borderRadius(12)
+              .onClick(() => router.pushUrl({ url: 'pages/ChatPage' }))
+            Button('LLM 配置')
+              .fontSize(12)
+              .fontColor($r('app.color.accent_blue'))
+              .backgroundColor('#E9F0FF')
+              .borderRadius(12)
+              .onClick(() => router.pushUrl({ url: 'pages/LLMConfigPage' }))
+          }
+          .width('100%')
+          .margin({ left: 20, right: 20, bottom: 18 })
+          Text(this.llmConfigured ? 'LLM 已配置，可使用 AI 服务' : 'LLM 未配置：点击“LLM 配置”开始')
+            .fontSize(12)
+            .fontColor(this.llmConfigured ? $r('app.color.accent_green') : $r('app.color.text_caption'))
+            .alignSelf(ItemAlign.Start)
+            .margin({ left: 22, bottom: 18 })
           Text('你的使用方式')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)

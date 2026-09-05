@@ -1,0 +1,10 @@
+{
+  "name": "@shixu/pi-agent-harmony",
+  "version": "0.73.1",
+  "description": "Official Pi Agent Core and pi-ai with HarmonyOS web-platform transport",
+  "artifactType": "original",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "dependencies": {}
+}
