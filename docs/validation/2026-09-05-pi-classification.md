@@ -4,6 +4,7 @@
 
 - 后台和手动分类共用 FileOrganizeService；充电 OR 可配置时间窗，后台读取真实设备状态。
 - 精确规则、LLM-RAG、本地 Embedding 以及人工确认共享分类应用接口；实际用户分类白名单、规则冲突、置信度、文件/规则变更校验。
+- 每个预设和用户分类生成独立词库，使用分类描述、规则关键词、格式和扩展同义词参与综合相关度；页面显示自动归类和人工确认后的运行识别率。
 - 本地作业记录、退避重试、90 秒后台预算、停止、手动接管后台。
 - ohpm 下载/转换的官方 Pi Agent Core / pi-ai 0.73.1；官方 Responses / Chat Completions SSE 和工具循环。
 - 智能分类页增加模式、批量/单文件触发、后台设置、停止和待确认结果。
@@ -14,6 +15,7 @@
 | --- | --- |
 | devecocli build（含 SDK HAR 更换后的 clean build） | 通过，ArkTS / JS 编译与签名 HAP 生成成功；仍有项目既有废弃 API 等警告 |
 | scripts/check-classification.cjs | 通过：正文规则、自定义分类、共同分类落库、模型不可用/未授权时本地处理、低分/冲突确认、旧建议拦截、持久作业、跨午夜及 OR 条件、手动接管后台 |
+| scripts/check-category-lexicon.cjs | 通过：预设和用户分类分别生成持久化词库，用户规则关键词进入对应词库 |
 | scripts/check-pi-sdk.cjs | 通过：真实 SDK 的 Responses/Chat SSE、中文、工具循环与终止、分类 enum 校验、401 脱敏、HTTP 释放；加载前移除 Node/浏览器全局对象 |
 | scripts/check-llm.cjs | 通过：HUKS 保存不重建密钥、INT32/INT64 输入 buffer、索引补充不擅自改类、建议去重、地址校验和网络错误提示 |
 | 上游源码完整性 | 10 个锁定依赖的归档 SHA-512 与转换后 JavaScript 文件校验通过，SDK/provider 源码未改写 |

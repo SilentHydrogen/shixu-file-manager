@@ -15,12 +15,24 @@ import { clampUploadContent } from './ContentBoundary'
 
 export interface OrganizeOutcome { status: 'applied' | 'review' | 'skipped'; category: string; reason: string }
 export interface OrganizeBatchResult { applied: number; review: number; skipped: number; failed: number; remaining: number }
+export interface ClassificationMetrics {
+  attempted: number
+  recognized: number
+  autoClassified: number
+  manualConfirmed: number
+  pendingReview: number
+  failed: number
+  recognitionRate: number
+  autoRate: number
+  lastUpdated: number
+}
 interface Attempt { signature: string; completed: boolean; failures: number; retryAt: number }
 
 export class FileOrganizeService {
   private static instance: FileOrganizeService
   private store: FileClassificationStore | null = null
   private attempts: preferences.Preferences | null = null
+  private metricsStore: preferences.Preferences | null = null
   private reviews: ReviewSuggestionService = new ReviewSuggestionService()
   private rag: RagAnalysisService = RagAnalysisService.getInstance()
   private llm: LLMService = LLMService.getInstance()
@@ -42,6 +54,7 @@ export class FileOrganizeService {
     this.context = context
     this.store = new FileClassificationStore(context)
     this.attempts = preferences.getPreferencesSync(context, { name: 'classification_jobs' })
+    this.metricsStore = preferences.getPreferencesSync(context, { name: 'classification_metrics' })
     await DatabaseManager.getInstance().init(context)
     await LLMConfigManager.getInstance().load(context)
     await PrivacyConsentManager.getInstance().load(context)
@@ -52,6 +65,26 @@ export class FileOrganizeService {
   usesLLM(): boolean { return this.llm.isConfigured() && PrivacyConsentManager.getInstance().canUpload() }
   files(): FileItem[] { return this.requireStore().files() }
   pendingReviews(): ReviewSuggestion[] { return this.reviews.listPending() }
+  metrics(): ClassificationMetrics {
+    const fallback: ClassificationMetrics = { attempted: 0, recognized: 0, autoClassified: 0,
+      manualConfirmed: 0, pendingReview: 0, failed: 0, recognitionRate: 0, autoRate: 0, lastUpdated: 0 }
+    if (this.metricsStore === null) return fallback
+    try {
+      const value = this.metricsStore.getSync('summary', JSON.stringify(fallback))
+      const parsed = JSON.parse(value as string) as Partial<ClassificationMetrics>
+      return {
+        attempted: parsed.attempted ?? fallback.attempted,
+        recognized: parsed.recognized ?? fallback.recognized,
+        autoClassified: parsed.autoClassified ?? fallback.autoClassified,
+        manualConfirmed: parsed.manualConfirmed ?? fallback.manualConfirmed,
+        pendingReview: parsed.pendingReview ?? fallback.pendingReview,
+        failed: parsed.failed ?? fallback.failed,
+        recognitionRate: parsed.recognitionRate ?? fallback.recognitionRate,
+        autoRate: parsed.autoRate ?? fallback.autoRate,
+        lastUpdated: parsed.lastUpdated ?? fallback.lastUpdated
+      }
+    } catch (error) { return fallback }
+  }
   isRunning(): boolean { return this.running || this.manualPending }
   cancelBackground(): void { if (this.background) this.cancel() }
   cancel(): void { this.cancelled = true; this.llm.cancelClassification() }
@@ -87,10 +120,12 @@ export class FileOrganizeService {
           if (outcome.status === 'applied') result.applied++
           else if (outcome.status === 'review') result.review++
           else result.skipped++
+          if (outcome.status !== 'skipped') await this.recordMetric(outcome.status)
           await this.recordAttempt(file, signature, true)
         } catch (error) {
           if (this.cancelled || (canContinue !== undefined && !canContinue())) break
           result.failed++
+          await this.recordMetric('failed')
           await this.recordAttempt(file, signature, false)
           console.warn('File classification failed; retry state persisted')
           if (fileId !== undefined) throw new Error(error instanceof Error ? error.message : '文件分析失败')
@@ -149,7 +184,7 @@ export class FileOrganizeService {
     const analysis: FileAnalysisResult = { summary: '', keywords: [], category: top?.category ?? '待整理',
       confidence: top?.score ?? 0, insufficientContent: top === undefined || margin < 0.08,
       reason: top === undefined ? '本地模型不可用或缺少有效分类，请人工确认' :
-        `本地 Embedding 扩展分类关键词，语义相似度 ${(top.score * 100).toFixed(0)}%，候选差值 ${(margin * 100).toFixed(0)}%` }
+        `词库${top.lexiconSource === 'user' ? '（用户定义）' : '（预设）'}：语义 ${((top.semanticScore ?? 0) * 100).toFixed(0)}%，关键词覆盖 ${((top.keywordScore ?? 0) * 100).toFixed(0)}%，综合识别率 ${(top.score * 100).toFixed(0)}%，候选差值 ${(margin * 100).toFixed(0)}%` }
     return this.decide(file, analysis, expectedFile, expectedRules, matches.length > 1, false)
   }
 
@@ -188,6 +223,7 @@ export class FileOrganizeService {
     if (!item?.fileUri || !item.fileFingerprint || !item.rulesFingerprint) throw new Error('建议已过期，请重新分析')
     await this.requireStore().classify(item.fileId, item.fileUri, item.suggestedCategory, true,
       item.fileFingerprint, item.rulesFingerprint)
+    await this.recordMetric('manual')
     this.reviews.accept(id)
     await this.reviews.flush()
   }
@@ -222,5 +258,19 @@ export class FileOrganizeService {
       retryAt: Date.now() + Math.min(24 * 60, 30 * Math.pow(2, Math.min(failures - 1, 6))) * 60000 }
     this.attempts.putSync(`file-${file.id}`, JSON.stringify(attempt))
     await this.attempts.flush()
+  }
+
+  private async recordMetric(kind: 'applied' | 'review' | 'failed' | 'manual'): Promise<void> {
+    if (this.metricsStore === null) return
+    const metrics = this.metrics()
+    if (kind === 'applied') { metrics.attempted++; metrics.recognized++; metrics.autoClassified++ }
+    if (kind === 'review') { metrics.attempted++; metrics.pendingReview++ }
+    if (kind === 'failed') metrics.failed++
+    if (kind === 'manual') { metrics.recognized++; metrics.manualConfirmed++ }
+    metrics.recognitionRate = metrics.attempted === 0 ? 0 : metrics.recognized / metrics.attempted
+    metrics.autoRate = metrics.attempted === 0 ? 0 : metrics.autoClassified / metrics.attempted
+    metrics.lastUpdated = Date.now()
+    this.metricsStore.putSync('summary', JSON.stringify(metrics))
+    await this.metricsStore.flush()
   }
 }

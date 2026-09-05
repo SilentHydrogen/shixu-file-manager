@@ -1,6 +1,6 @@
 export class DatabaseConfig {
   static readonly DB_NAME: string = 'shixu_rag.db'
-  static readonly DB_VERSION: number = 3
+  static readonly DB_VERSION: number = 4
   static readonly VECTOR_DIMENSION: number = 512
 
   static readonly TABLE_FILES: string = 'files'
@@ -12,4 +12,5 @@ export class DatabaseConfig {
   // 虚拟表（向量扩展）
   static readonly TABLE_FILE_EMBEDDINGS: string = 'file_embeddings'
   static readonly TABLE_KEYWORD_EMBEDDINGS: string = 'keyword_embeddings'
+  static readonly TABLE_CATEGORY_LEXICONS: string = 'category_lexicons'
 }

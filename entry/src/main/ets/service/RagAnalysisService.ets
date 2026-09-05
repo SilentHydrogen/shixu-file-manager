@@ -12,15 +12,22 @@ import { common } from '@kit.AbilityKit'
 import fs from '@ohos.file.fs'
 import { FileClassificationStore } from './FileClassificationStore'
 import { FileItem, CategoryItem, SmartRule } from '../data/model/FileBoxTypes'
-import { fieldMatches, splitRuleKeywords } from './ClassificationRules'
+import { CategoryLexicon } from '../data/model/CategoryLexicon'
+import { fieldMatches } from './ClassificationRules'
 
-export interface CategoryScore { category: string; score: number }
+export interface CategoryScore {
+  category: string
+  score: number
+  semanticScore?: number
+  keywordScore?: number
+  recognitionRate?: number
+  lexiconSource?: 'preset' | 'user'
+}
 
 export interface SearchResult { file: FileInfo; score: number }
 
 export class RagAnalysisService {
   private static instance: RagAnalysisService
-  private categoryVectors: Map<string, number[]> = new Map()
   private fileBox: FileClassificationStore | null = null
   private initialization: Promise<void> | null = null
   private fileRepo: FileRepository = new FileRepository()
@@ -80,26 +87,25 @@ export class RagAnalysisService {
 
   async localCategoryScores(file: FileItem, categories: CategoryItem[], rules: SmartRule[]): Promise<CategoryScore[]> {
     const result: CategoryScore[] = []
-    if (!this.embeddingModel.isAvailable()) return result
-    const vector = await this.embeddingModel.encode(`${file.name}\n${file.contentText}`)
+    const lexicons: CategoryLexicon[] = await this.keywordExpansion.syncCategoryLexicons(categories, rules)
+    const byCategory: Map<string, CategoryLexicon> = new Map()
+    lexicons.forEach((item: CategoryLexicon) => byCategory.set(item.categoryName, item))
+    const vector: number[] = this.embeddingModel.isAvailable()
+      ? await this.embeddingModel.encode(`${file.name}\n${file.contentText}`) : []
     for (const category of categories) {
       if (category.name === '待整理') continue
       const relevant = rules.filter((rule: SmartRule) => rule.enabled && rule.targetTag === category.name)
-      const seeds = relevant.flatMap((rule: SmartRule) => splitRuleKeywords(`${rule.titleKeywords},${rule.contentKeywords}`))
-      const key = JSON.stringify([category.name, category.subtitle, seeds])
-      let target = this.categoryVectors.get(key)
-      if (target === undefined) {
-        const expanded = await this.keywordExpansion.expand(seeds.slice(0, 12))
-        target = await this.embeddingModel.encode(`${category.name} ${category.subtitle} ${expanded.join(' ')}`)
-        if (this.categoryVectors.size >= 128) this.categoryVectors.clear()
-        this.categoryVectors.set(key, target)
-      }
-      let dot = 0; let left = 0; let right = 0
-      for (let i = 0; i < vector.length; i++) { dot += vector[i] * target[i]; left += vector[i] ** 2; right += target[i] ** 2 }
-      let score = dot / (Math.sqrt(left * right) || 1)
+      const lexicon = byCategory.get(category.name)
+      const semanticScore: number = lexicon === undefined || lexicon.embedding.length === 0
+        ? 0 : Math.max(0, Math.min(1, this.cosine(vector, lexicon.embedding)))
+      const keywordScore: number = lexicon === undefined ? 0 : this.keywordCoverage(file, lexicon.expandedKeywords)
+      let score = this.embeddingModel.isAvailable()
+        ? semanticScore * 0.65 + keywordScore * 0.35 : keywordScore
       // A format restriction remains a hard boundary even when keywords expand semantically.
       if (relevant.length > 0 && !relevant.some((rule: SmartRule) => fieldMatches(file.extension, rule.formats))) score = 0
-      result.push({ category: category.name, score: Math.max(0, Math.min(1, score)) })
+      const bounded = Math.max(0, Math.min(1, score))
+      result.push({ category: category.name, score: bounded, semanticScore: semanticScore,
+        keywordScore: keywordScore, recognitionRate: bounded, lexiconSource: lexicon?.source })
     }
     return result.sort((a: CategoryScore, b: CategoryScore) => b.score - a.score)
   }
@@ -187,7 +193,9 @@ export class RagAnalysisService {
     const file: FileInfo | null = await this.fileRepo.findById(fileId)
     if (file === null) throw new Error(`File ${fileId} not found`)
     const content: string = await this.readFileContent(file.path)
-    return await this.llmService.analyzeFile(file.name, file.type, content, SUPPORTED_CATEGORIES)
+    const categories: string[] = this.fileBox?.categories().map((item: CategoryItem) => item.name)
+      ?? SUPPORTED_CATEGORIES
+    return await this.llmService.analyzeFile(file.name, file.type, content, categories)
   }
 
   private async readFileContent(path: string): Promise<string> {
@@ -213,6 +221,32 @@ export class RagAnalysisService {
   private chunkScore(chunk: string, terms: string[]): number {
     const tokens = this.tokens(chunk)
     return terms.reduce((score: number, term: string) => score + (tokens.includes(term) ? 1 : 0), 0)
+  }
+
+  private keywordCoverage(file: FileItem, keywords: string[]): number {
+    const usable = keywords.filter((keyword: string) => keyword.length > 1).slice(0, 48)
+    if (usable.length === 0) return 0
+    const name = file.name.toLowerCase()
+    const content = file.contentText.toLowerCase()
+    let evidence = 0
+    for (const keyword of usable) {
+      if (name.includes(keyword)) evidence += 1.5
+      else if (content.includes(keyword)) evidence += 1
+    }
+    return Math.max(0, Math.min(1, evidence / Math.max(2, Math.min(usable.length, 12))))
+  }
+
+  private cosine(left: number[], right: number[]): number {
+    if (left.length === 0 || left.length !== right.length) return 0
+    let dot = 0
+    let leftNorm = 0
+    let rightNorm = 0
+    for (let index = 0; index < left.length; index++) {
+      dot += left[index] * right[index]
+      leftNorm += left[index] * left[index]
+      rightNorm += right[index] * right[index]
+    }
+    return dot / ((Math.sqrt(leftNorm) * Math.sqrt(rightNorm)) || 1)
   }
 
 }

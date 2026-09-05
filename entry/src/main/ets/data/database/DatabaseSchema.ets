@@ -11,7 +11,8 @@ export class DatabaseSchema {
       DatabaseSchema.createVectorStorageTiersTable(),
       DatabaseSchema.createRagAnalysisLogsTable(),
       DatabaseSchema.createFileEmbeddingsTable(),
-      DatabaseSchema.createKeywordEmbeddingsTable()
+      DatabaseSchema.createKeywordEmbeddingsTable(),
+      DatabaseSchema.createCategoryLexiconsTable()
     ]
   }
 
@@ -127,6 +128,21 @@ export class DatabaseSchema {
     `
   }
 
+  private static createCategoryLexiconsTable(): string {
+    return `
+      CREATE TABLE IF NOT EXISTS category_lexicons (
+        category_name TEXT PRIMARY KEY,
+        subtitle TEXT NOT NULL,
+        source TEXT NOT NULL,
+        seed_keywords TEXT NOT NULL,
+        expanded_keywords TEXT NOT NULL,
+        embedding_vector TEXT NOT NULL,
+        fingerprint TEXT NOT NULL,
+        updated_time INTEGER NOT NULL
+      )
+    `
+  }
+
   /**
    * 获取创建索引的 SQL 语句
    */
@@ -137,7 +153,8 @@ export class DatabaseSchema {
       'CREATE INDEX IF NOT EXISTS idx_file_collection_refs_file_id ON file_collection_refs(file_id)',
       'CREATE INDEX IF NOT EXISTS idx_file_collection_refs_collection_id ON file_collection_refs(collection_id)',
       'CREATE INDEX IF NOT EXISTS idx_vector_storage_tiers_tier ON vector_storage_tiers(tier)',
-      'CREATE INDEX IF NOT EXISTS idx_keyword_embeddings_category ON keyword_embeddings(category)'
+      'CREATE INDEX IF NOT EXISTS idx_keyword_embeddings_category ON keyword_embeddings(category)',
+      'CREATE INDEX IF NOT EXISTS idx_category_lexicons_source ON category_lexicons(source)'
     ]
   }
 }

@@ -1,6 +1,6 @@
 import { common } from '@kit.AbilityKit'
 import { FileItem } from '../data/model/FileBoxTypes'
-import { FileOrganizeService } from '../service/FileOrganizeService'
+import { ClassificationMetrics, FileOrganizeService } from '../service/FileOrganizeService'
 import { ReviewSuggestion } from '../service/ReviewSuggestionService'
 import { OrganizeSettings } from '../service/OrganizeSettings'
 import { BackgroundAnalysisScheduler } from '../service/BackgroundAnalysisScheduler'
@@ -15,6 +15,10 @@ struct AIOrganizePage {
   @State isLoading: boolean = true
   @State statusMessage: string = ''
   @State usesLLM: boolean = false
+  @State metrics: ClassificationMetrics = {
+    attempted: 0, recognized: 0, autoClassified: 0, manualConfirmed: 0,
+    pendingReview: 0, failed: 0, recognitionRate: 0, autoRate: 0, lastUpdated: 0
+  }
   @State backgroundEnabled: boolean = true
   @State charging: boolean = true
   @State startHour: string = '2'
@@ -46,6 +50,7 @@ struct AIOrganizePage {
     this.files = this.service.files()
     this.suggestions = this.service.pendingReviews()
     this.usesLLM = this.service.usesLLM()
+    this.metrics = this.service.metrics()
   }
   private async organize(fileId?: number): Promise<void> {
     if (this.isLoading) return
@@ -97,6 +102,8 @@ struct AIOrganizePage {
             Text(this.usesLLM ? '结合相关文件与现有规则，使用已配置模型分析' : '无需配置提供商；文件内容在手机上处理')
               .fontSize(13).fontColor($r('app.color.accent_blue')).id('organizeMode')
             Text(`${this.files.length} 个文件 · ${this.suggestions.length} 条待确认`).fontSize(13)
+            Text(`识别率 ${(this.metrics.recognitionRate * 100).toFixed(0)}% · 自动归类率 ${(this.metrics.autoRate * 100).toFixed(0)}% · 已分析 ${this.metrics.attempted} 个`)
+              .fontSize(13).fontColor($r('app.color.accent_blue')).id('recognitionRate')
             Button(this.isLoading ? '处理中…' : '立即整理待分类文件').width('100%').enabled(!this.isLoading)
               .id('organizeNow').onClick(() => this.organize())
             if (this.organizeRunning) {

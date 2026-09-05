@@ -1,6 +1,9 @@
 import { EmbeddingModel } from './model/EmbeddingModel'
 import { KeywordEmbeddingRepository } from '../data/repository/KeywordEmbeddingRepository'
 import { KeywordEmbedding } from '../data/model/KeywordEmbedding'
+import { CategoryLexiconRepository } from '../data/repository/CategoryLexiconRepository'
+import { CategoryLexicon } from '../data/model/CategoryLexicon'
+import { CategoryItem, SmartRule } from '../data/model/FileBoxTypes'
 
 export const CATEGORY_SYNONYM_GROUPS: Record<string, string[][]> = {
   '工作': [['工作', '办公', 'work'], ['会议', 'meeting'], ['邮件', 'email'], ['报表', '报告', 'report'], ['合同', '协议'], ['客户', '顾客']],
@@ -20,6 +23,7 @@ export const SUPPORTED_CATEGORIES: string[] = Object.keys(CATEGORY_KEYWORDS)
 
 export class KeywordExpansionService {
   private repository: KeywordEmbeddingRepository = new KeywordEmbeddingRepository()
+  private lexiconRepository: CategoryLexiconRepository = new CategoryLexiconRepository()
   private model: EmbeddingModel
   private ready: boolean = false
   constructor(model: EmbeddingModel) { this.model = model }
@@ -74,6 +78,68 @@ export class KeywordExpansionService {
       if (similarity > score) { score = similarity; category = candidate.category }
     }
     return category
+  }
+
+  /**
+   * Build one persisted vector lexicon for every actual category in the UI.
+   * Preset rules and built-in synonyms seed preset lexicons; all other
+   * categories are treated as user lexicons and use their own description and
+   * rules as the seed vocabulary.
+   */
+  async syncCategoryLexicons(categories: CategoryItem[], rules: SmartRule[]): Promise<CategoryLexicon[]> {
+    const existing = await this.lexiconRepository.list()
+    const oldByName: Map<string, CategoryLexicon> = new Map()
+    existing.forEach((item: CategoryLexicon) => oldByName.set(item.categoryName, item))
+    const activeNames: Set<string> = new Set(categories.map((item: CategoryItem) => item.name))
+    const result: CategoryLexicon[] = []
+    for (const category of categories) {
+      const categoryRules: SmartRule[] = rules.filter((rule: SmartRule) => rule.enabled && rule.targetTag === category.name)
+      const seeds: string[] = this.categorySeeds(category, categoryRules)
+      const fingerprint: string = this.lexiconFingerprint(category, categoryRules, seeds)
+      const old = oldByName.get(category.name)
+      if (old !== undefined && old.fingerprint === fingerprint &&
+        (!this.model.isAvailable() || old.embedding.length > 0)) {
+        result.push(old)
+        continue
+      }
+      const expanded: string[] = await this.expand(seeds.slice(0, 32))
+      const embedding: number[] = this.model.isAvailable()
+        ? await this.model.encode(`${category.name} ${category.subtitle} ${expanded.join(' ')}`) : []
+      const item: CategoryLexicon = {
+        categoryName: category.name,
+        subtitle: category.subtitle,
+        source: CATEGORY_KEYWORDS[category.name] !== undefined || categoryRules.some((rule: SmartRule) => rule.isDefault)
+          ? 'preset' : 'user',
+        seedKeywords: seeds,
+        expandedKeywords: expanded,
+        embedding: embedding,
+        fingerprint: fingerprint,
+        updatedTime: Date.now()
+      }
+      await this.lexiconRepository.upsert(item)
+      result.push(item)
+    }
+    // Removed categories should not influence later classification or metrics.
+    return result.filter((item: CategoryLexicon) => activeNames.has(item.categoryName))
+  }
+
+  private categorySeeds(category: CategoryItem, rules: SmartRule[]): string[] {
+    const values: string[] = [category.name, category.subtitle, ...(CATEGORY_KEYWORDS[category.name] ?? [])]
+    rules.forEach((rule: SmartRule) => values.push(rule.name, rule.titleKeywords, rule.contentKeywords, rule.formats))
+    const result: string[] = []
+    for (const value of values) {
+      const parts = value.toLowerCase().split(/[\s,，、。；;：:/\\._\-]+/)
+      for (const part of parts) if (part.length > 0 && !result.includes(part)) result.push(part)
+    }
+    return result.slice(0, 64)
+  }
+
+  private lexiconFingerprint(category: CategoryItem, rules: SmartRule[], seeds: string[]): string {
+    const value = JSON.stringify([category.name, category.subtitle, seeds,
+      rules.map((rule: SmartRule) => [rule.id, rule.name, rule.titleKeywords, rule.contentKeywords, rule.formats, rule.enabled])])
+    let hash: number = 2166136261
+    for (let index = 0; index < value.length; index++) hash = Math.imul(hash ^ value.charCodeAt(index), 16777619)
+    return `${value.length}:${hash >>> 0}`
   }
   private cosine(a: number[], b: number[]): number {
     if (a.length !== b.length) return 0

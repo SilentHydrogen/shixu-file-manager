@@ -65,6 +65,18 @@ export class DatabaseManager {
       if (version < 3) {
         try { await store.executeSql("ALTER TABLE files ADD COLUMN category TEXT DEFAULT '待整理'") } catch (error) { /* column already exists */ }
       }
+      if (version < 4) {
+        await store.executeSql(`CREATE TABLE IF NOT EXISTS category_lexicons (
+          category_name TEXT PRIMARY KEY,
+          subtitle TEXT NOT NULL,
+          source TEXT NOT NULL,
+          seed_keywords TEXT NOT NULL,
+          expanded_keywords TEXT NOT NULL,
+          embedding_vector TEXT NOT NULL,
+          fingerprint TEXT NOT NULL,
+          updated_time INTEGER NOT NULL
+        )`)
+      }
       await store.executeSql(`UPDATE schema_meta SET value = '${DatabaseConfig.DB_VERSION}' WHERE key = 'schema_version'`)
     }
   }
