@@ -48,7 +48,7 @@
 
 ### 提交
 
-- 提交信息用英文，简短描述实际变更（沿用仓库现有风格），推荐 `<type>: <summary>` 前缀：
+  提交信息用英文，简短描述实际变更（沿用仓库现有风格），推荐 `<type>: <summary>` 前缀：
   - `feat:` 新功能　`fix:` 缺陷修复　`refactor:` 重构　`docs:` 文档　`test:` 测试　`chore:` 构建/工具/杂项
 - 一个提交对应一个逻辑变更，不要把无关改动混在一起
 - 提交前 `git diff` 审查，排除无关改动与临时文件
@@ -90,6 +90,6 @@ HarmonyOS 资源统一按官方 resource 目录组织，通过 `$media:xxx`、`$
 
 ## 环境
 
-- 开发工具：DevEco Studio / `devecocli`（Linux 下 build/run 需 `DEVECO_CLI_CLT_PATH` 指向 Command Line Tools）
+- 开发工具：DevEco Studio / `devecocli`（Linux 下 build/run 需 `DEVECO_CLI_CLT_PATH` 指向 Command Line Tools Linux的DEVECO_CLI_CLT_PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/）
 - 构建：hvigor；依赖：ohpm；包配置见 `oh-package.json5`、`build-profile.json5`
 - 文件管理器 skill 已安装于 `.agents/skills/deveco-cli`，可查文档、UI 检查、取日志等

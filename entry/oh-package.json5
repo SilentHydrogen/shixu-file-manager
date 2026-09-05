@@ -6,6 +6,9 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "libentry.so": "file:./src/main/cpp/types/libentry"
-  }
+    "libentry.so": "file:./src/main/cpp/types/libentry",
+    "@shixu/pi-agent-harmony": "file:../packages/pi-agent-harmony/pi-agent-harmony.har"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
 }

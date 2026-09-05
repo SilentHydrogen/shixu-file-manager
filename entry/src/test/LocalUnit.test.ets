@@ -1,6 +1,49 @@
 import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
+import databaseManagerTest from './ets/data/DatabaseManagerTest';
+import fileInfoTest from './ets/data/FileInfoTest';
+import fileRepositoryTest from './ets/data/FileRepositoryTest';
+import collectionRepositoryTest from './ets/data/CollectionRepositoryTest';
+import fileCollectionRefRepositoryTest from './ets/data/FileCollectionRefRepositoryTest';
+import vectorStorageTierRepositoryTest from './ets/data/VectorStorageTierRepositoryTest';
+import ragAnalysisLogRepositoryTest from './ets/data/RagAnalysisLogRepositoryTest';
+import fileProcessingQueueTest from './ets/service/FileProcessingQueueTest';
+import ragAnalysisServiceTest from './ets/service/RagAnalysisServiceTest';
+import promptTemplatesTest from './ets/llm/PromptTemplatesTest';
+import llmConfigTest from './ets/llm/LLMConfigTest';
+import llmServiceTest from './ets/llm/LLMServiceTest';
+import ragTextUtilsTest from './ets/llm/RagTextUtilsTest';
+import llmResponseParserTest from './ets/llm/LLMResponseParserTest';
+import servicePolicyTest from './ets/service/ServicePolicyTest';
+import reviewSuggestionServiceTest from './ets/service/ReviewSuggestionServiceTest';
+import privacyConsentManagerTest from './ets/service/PrivacyConsentManagerTest';
+import embeddingModelTest from './ets/ai/EmbeddingModelTest';
+import contentBoundaryExtendedTest from './ets/service/ContentBoundaryExtendedTest';
+import openAIClientProtocolTest from './ets/llm/OpenAIClientProtocolTest';
 
 export default function localUnitTest() {
+  databaseManagerTest();
+  fileInfoTest();
+  fileRepositoryTest();
+  collectionRepositoryTest();
+  fileCollectionRefRepositoryTest();
+  vectorStorageTierRepositoryTest();
+  ragAnalysisLogRepositoryTest();
+  fileProcessingQueueTest();
+  ragAnalysisServiceTest();
+
+  // LLM Tests
+  promptTemplatesTest();
+  llmConfigTest();
+  llmServiceTest();
+  ragTextUtilsTest();
+  llmResponseParserTest();
+  servicePolicyTest();
+  reviewSuggestionServiceTest();
+  privacyConsentManagerTest();
+  embeddingModelTest();
+  contentBoundaryExtendedTest();
+  openAIClientProtocolTest();
+
   describe('localUnitTest', () => {
     // Defines a test suite. Two parameters are supported: test suite name and test suite function.
     beforeAll(() => {

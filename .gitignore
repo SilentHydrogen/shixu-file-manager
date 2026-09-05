@@ -1,4 +1,4 @@
-/node_modules
+node_modules/
 /oh_modules
 /local.properties
 /.idea
@@ -15,4 +15,7 @@
 /.appanalyzer
 *.log
 *.tmp
+/diagnosis/hilog_raw/
+/diagnosis/hilog_parsed/
+/diagnosis/mem_buffer_*.txt
 /创意说明.md

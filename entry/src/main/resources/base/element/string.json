@@ -35,6 +35,98 @@
     {
       "name": "quick_categories_widget_desc",
       "value": "从桌面快速进入常用分类"
+    },
+    {
+      "name": "ai_provider_title",
+      "value": "模型服务"
+    },
+    {
+      "name": "ai_provider_intro",
+      "value": "连接你的智能助手"
+    },
+    {
+      "name": "ai_provider_hint",
+      "value": "接入兼容服务，先测试连接，再保存配置。"
+    },
+    {
+      "name": "ai_endpoint_hint",
+      "value": "支持基础地址或完整 /chat/completions、/responses 地址。自动模式依据完整地址识别协议。"
+    },
+    {
+      "name": "ai_generation_settings",
+      "value": "生成设置"
+    },
+    {
+      "name": "ai_content_permission",
+      "value": "文件内容授权"
+    },
+    {
+      "name": "ai_content_permission_hint",
+      "value": "本地向量检索在手机上完成。文件问答与整理会向所选提供商发送文件名和受限内容片段；普通对话只发送你输入的消息。"
+    },
+    {
+      "name": "ai_chat_welcome",
+      "value": "从文件中找到答案"
+    },
+    {
+      "name": "ai_chat_hint",
+      "value": "先收纳文件，再提问。回答会附上检索到的文件来源。"
+    },
+    {
+      "name": "ai_chat_plain_welcome",
+      "value": "和助手聊一聊"
+    },
+    {
+      "name": "ai_chat_plain_hint",
+      "value": "当前为普通对话，不读取收纳箱文件。"
+    },
+    {
+      "name": "ai_chat_mode_files",
+      "value": "文件问答"
+    },
+    {
+      "name": "ai_chat_mode_plain",
+      "value": "普通对话"
+    },
+    {
+      "name": "ai_chat_example_work",
+      "value": "帮我查找与工作相关的文件"
+    },
+    {
+      "name": "ai_chat_example_study",
+      "value": "学习资料里有哪些重要内容？"
+    },
+    {
+      "name": "ai_organize_flow",
+      "value": "先收纳，再归类"
+    },
+    {
+      "name": "ai_organize_flow_hint",
+      "value": "规则优先处理；AI 补充分类理由。不确定的结果由你确认。"
+    },
+    {
+      "name": "ai_review_title",
+      "value": "待确认建议"
+    },
+    {
+      "name": "ai_classify_title",
+      "value": "智能文件分类"
+    },
+    {
+      "name": "ai_classify_hint",
+      "value": "优先按规则归类；高置信度自动应用，冲突或证据不足时由你确认。"
+    },
+    {
+      "name": "ai_background_title",
+      "value": "后台自动分类"
+    },
+    {
+      "name": "ai_charging_trigger",
+      "value": "充电时整理"
+    },
+    {
+      "name": "ai_schedule_hint",
+      "value": "满足充电或时间窗即可整理；后台唤醒由系统调度，可能延后。关闭首页自动整理时，后台也会暂停。"
     }
   ]
 }

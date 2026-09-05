@@ -11,6 +11,9 @@
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
+    "requestPermissions": [
+      { "name": "ohos.permission.INTERNET" }
+    ],
     "abilities": [
       {
         "name": "EntryAbility",
@@ -48,6 +51,12 @@
       }
     ],
     "extensionAbilities": [
+      {
+        "name": "RagWorkSchedulerExtensionAbility",
+        "srcEntry": "./ets/entryability/RagWorkSchedulerExtensionAbility.ets",
+        "type": "workScheduler",
+        "exported": false
+      },
       {
         "name": "FileBoxFormAbility",
         "srcEntry": "./ets/formability/FileBoxFormAbility.ets",

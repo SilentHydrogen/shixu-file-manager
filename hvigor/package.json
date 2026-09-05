@@ -1,0 +1,8 @@
+{
+  "name": "hvigor",
+  "version": "1.0.0",
+  "description": "hvigor",
+  "dependencies": {
+    "@ohos/hvigor-ohos-arkui-x-plugin": "4.23.7"
+  }
+}

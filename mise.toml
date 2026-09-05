@@ -1,0 +1,71 @@
+[tools]
+
+[tasks]
+
+[tasks."test:unit:llm"]
+description = "Run LLM unit suites"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope LLMConfigManager,LLMService,PromptTemplates,RagTextUtils,LLMResponseParser"
+
+[tasks."test:unit:data"]
+description = "Run data unit suites"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope DatabaseManager,FileInfo,FileRepository,CollectionRepository,FileCollectionRefRepository,VectorStorageTierRepository,RagAnalysisLogRepository"
+
+[tasks."test:unit:monitor"]
+description = "Run directory and policy unit suites"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope ServicePolicy"
+
+[tasks."test:unit:scheduler"]
+description = "Run scheduler policy unit suite"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope ServicePolicy"
+
+[tasks."test:unit:embedding"]
+description = "Run local embedding unit suite"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope EmbeddingModel"
+
+[tasks."test:unit:content"]
+description = "Run content boundary unit suite"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope ServicePolicy"
+
+[tasks."test:unit:rag"]
+description = "Run RAG unit suite"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope RagAnalysisService"
+
+[tasks."test:unit:review"]
+description = "Run review unit suite"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope ReviewSuggestionService"
+
+[tasks."test:unit:privacy"]
+description = "Run privacy unit suite"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" PATH=/home/cmz488/Downloads/commandline-tools-linux-x64-26.0.0.821/command-line-tools/hvigor/bin:$PATH python /home/cmz488/.agents/skills/hmos-local-test/scripts/run_local_test.py --project-path \"$PWD\" --module entry --no-coverage --scope PrivacyConsentManager"
+
+[tasks."check:build"]
+description = "Lint and build HarmonyOS app"
+run = "CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" devecocli check lint . && CI=true HOME=\"$PWD\" NPM_CONFIG_PREFIX=\"$PWD/.npm-prefix\" devecocli build"
+
+[tasks."check:lfs-model"]
+description = "Verify model artifact and Git LFS tracking"
+run = "test -s entry/src/main/resources/rawfile/models/bge-small-zh-v1.5-int8.ms && git lfs ls-files --error-unmatch entry/src/main/resources/rawfile/models/bge-small-zh-v1.5-int8.ms"
+
+[tasks."verify:device:ui"]
+description = "Verify deployed UI on connected device"
+run = "devecocli run --module entry --device \"${DEVICE_SERIAL:?Set DEVICE_SERIAL}\" --ability EntryAbility && devecocli ui layout --device \"${DEVICE_SERIAL}\" --format json --mode full"
+
+[tasks."verify:device:llm"]
+description = "Verify LLM configuration and chat on device"
+run = "devecocli ui layout --device \"${DEVICE_SERIAL:?Set DEVICE_SERIAL}\" --format json --mode full"
+
+[tasks."verify:device:monitor"]
+description = "Verify directory monitor on device"
+run = "devecocli ui layout --device \"${DEVICE_SERIAL:?Set DEVICE_SERIAL}\" --format json --mode full"
+
+[tasks."verify:device:embedding"]
+description = "Verify local embedding on device"
+run = "devecocli ui layout --device \"${DEVICE_SERIAL:?Set DEVICE_SERIAL}\" --format json --mode full"
+
+[tasks."verify:device:scheduler"]
+description = "Verify background scheduler on device"
+run = "devecocli ui layout --device \"${DEVICE_SERIAL:?Set DEVICE_SERIAL}\" --format json --mode full"
+
+[tasks."verify:device:e2e"]
+description = "Verify RAG end-to-end flow on device"
+run = "devecocli ui layout --device \"${DEVICE_SERIAL:?Set DEVICE_SERIAL}\" --format json --mode full"
